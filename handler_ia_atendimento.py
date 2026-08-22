@@ -36,11 +36,14 @@ async def iniciar_atendimento(update: Update, context):
 async def tratar_escolha_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+
+    # Verifica o botão clicado
+    if query.data == "transbordo" or query.data == "iniciar_atendimento_20":
+        return await transbordo_para_atendimento(update, context)
     
-    dados = query.data  # <--- ADICIONE ESTA LINHA AQUI
-    
-    if dados == "opcao_1":
-        # ... seu código ...
+    elif query.data == "opcao_1":
+        # ... coloque o código da sua opção aqui com os devidos espaços ...
+        pass
     
     # SE O BOTÃO CLICADO FOR O DE ATENDIMENTO/TRANSBORDO:
     if query.data == "transbordo" or query.data == "iniciar_atendimento_20":
