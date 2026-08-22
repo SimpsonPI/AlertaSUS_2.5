@@ -1,6 +1,6 @@
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ConversationHandler
+from telegram import Update
+from telegram.ext import ContextTypes, ConversationHandler
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ async def iniciar_atendimento_callback(query):
     )
     return MENU_PRINCIPAL
 
-async def transbordo_para_atendimento(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def transbordo_para_atendimento(update, context):
     """Passo 4: Encaminha para o atendimento personalizado."""
     query = update.callback_query
     await query.answer()
@@ -105,5 +105,4 @@ async def transbordo_para_atendimento(update: Update, context: ContextTypes.DEFA
 
     logger.info(f"🚨 TRANSBORDO SOLICITADO - Usuário: {user_nome} ({username}) | ID: {user_id}")
     
-    # Mude para retornar o estado que vai escutar o texto que o usuário digitar a seguir:
     return AGUARDANDO_MENSAGEM
