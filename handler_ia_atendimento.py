@@ -87,8 +87,11 @@ async def iniciar_atendimento_callback(query):
     )
     return MENU_PRINCIPAL
 
-async def transbordo_para_atendimento(query, context):
+async def transbordo_para_atendimento(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Passo 4: Encaminha para o atendimento personalizado."""
+    query = update.callback_query
+    await query.answer()
+    
     user = query.from_user
     user_nome = user.first_name or "Usuário"
     user_id = user.id
@@ -96,10 +99,11 @@ async def transbordo_para_atendimento(query, context):
 
     await query.edit_message_text(
         text="✅ <b>Solicitação registrada!</b>\n\n"
-             "Aguarde, em breve você receberá atendimento personalizado da nossa equipe por aqui.",
+             "Aguarde, escreva abaixo a sua dúvida ou demanda para que nossa equipe receba por aqui.",
         parse_mode="HTML"
     )
 
     logger.info(f"🚨 TRANSBORDO SOLICITADO - Usuário: {user_nome} ({username}) | ID: {user_id}")
     
-    return ConversationHandler.END
+    # Mude para retornar o estado que vai escutar o texto que o usuário digitar a seguir:
+    return AGUARDANDO_MENSAGEM
