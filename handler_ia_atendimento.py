@@ -65,7 +65,7 @@ async def tratar_escolha_menu(update: Update, context):
     elif dados == "voltar_menu":
         return await iniciar_atendimento_callback(query)
     elif dados == "personalizado":
-        return await transbordo_para_atendente(query, context)
+        return await transbordo_para_atendimento(query, context)
     else:
         resposta = "Opção inválida."
 
