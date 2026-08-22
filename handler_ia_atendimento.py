@@ -14,12 +14,12 @@ async def iniciar_atendimento(update: Update, context):
 
     user_nome = update.effective_user.first_name or "Usuário"
     
-    # Teclado inline com as perguntas direcionadas e a opção de atendimento humano
+    # Teclado inline com as perguntas direcionadas e a opção de atendimento personalizado
     teclado = [
         [InlineKeyboardButton("1️⃣ Como consultar minha regulação?", callback_data="opcao_1")],
         [InlineKeyboardButton("2️⃣ Prazos para exames e consultas", callback_data="opcao_2")],
         [InlineKeyboardButton("3️⃣ Problemas de acesso à plataforma", callback_data="opcao_3")],
-        [InlineKeyboardButton("👤 Falar com Atendimento Personalizado", callback_data="humano")]
+        [InlineKeyboardButton("👤 Falar com Atendimento Personalizado", callback_data="personalizado")]
     ]
     reply_markup = InlineKeyboardMarkup(teclado)
 
@@ -43,7 +43,7 @@ async def tratar_escolha_menu(update: Update, context):
     # Teclado para retornar ao menu ou encerrar
     teclado_voltar = [
         [InlineKeyboardButton("⬅️ Voltar ao Menu", callback_data="voltar_menu"),
-         InlineKeyboardButton("👤 Falar com Humano", callback_data="humano")]
+         InlineKeyboardButton("👤 Atendimento Personalizado", callback_data="personalizado")]
     ]
     reply_markup = InlineKeyboardMarkup(teclado_voltar)
 
@@ -64,8 +64,8 @@ async def tratar_escolha_menu(update: Update, context):
         )
     elif dados == "voltar_menu":
         return await iniciar_atendimento_callback(query)
-    elif dados == "humano":
-        return await transbordo_para_humano(query, context)
+    elif dados == "personalizado":
+        return await transbordo_para_atendente(query, context)
     else:
         resposta = "Opção inválida."
 
@@ -78,7 +78,7 @@ async def iniciar_atendimento_callback(query):
         [InlineKeyboardButton("1️⃣ Como consultar minha regulação?", callback_data="opcao_1")],
         [InlineKeyboardButton("2️⃣ Prazos para exames e consultas", callback_data="opcao_2")],
         [InlineKeyboardButton("3️⃣ Problemas de acesso à plataforma", callback_data="opcao_3")],
-        [InlineKeyboardButton("👤 Falar com Atendimento Personalizado", callback_data="humano")]
+        [InlineKeyboardButton("👤 Falar com Atendimento Personalizado", callback_data="personalizado")]
     ]
     await query.edit_message_text(
         text="Escolha uma das opções abaixo:",
@@ -87,8 +87,8 @@ async def iniciar_atendimento_callback(query):
     )
     return MENU_PRINCIPAL
 
-async def transbordo_para_humano(query, context):
-    """Passo 4: Encaminha para o atendimento personalizado humano."""
+async def transbordo_para_atendimento(query, context):
+    """Passo 4: Encaminha para o atendimento personalizado."""
     user = query.from_user
     user_nome = user.first_name or "Usuário"
     user_id = user.id

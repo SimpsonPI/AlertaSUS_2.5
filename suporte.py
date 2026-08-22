@@ -63,16 +63,15 @@ async def menu_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def menu_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Menu exclusivo para a Central de Suporte e Atendimento Humano."""
+    """Menu exclusivo para a Central de Suporte e Atendimento."""
     texto = (
         "🎧 <b>Central de Suporte e Atendimento AlertaSUS 2.0</b>\n\n"
         "Não encontrou o que precisava na central de ajuda ou está enfrentando algum problema técnico? "
-        "Nossa equipe está pronta para te auxiliar.\n\n"
-        "Clique no botão abaixo para iniciar o processo de <b>abertura de chamado</b>:"
+        "Clique no botão abaixo para ir direto para o nosso Bot de Atendimento:"
     )
 
     teclado = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📋 Abrir Chamado", callback_data="iniciar_atendimento_20")],
+        [InlineKeyboardButton("🎧 Atendimento AlertaSUS", url="https://t.me/meu_atendimento_123_bot")],
         [InlineKeyboardButton("📖 Voltar para a Central de Ajuda", callback_data="ajuda")],
         [InlineKeyboardButton("❌ Fechar", callback_data="fechar_menu")],
     ])
@@ -122,7 +121,7 @@ async def exibir_resposta_faq(update: Update, context: ContextTypes.DEFAULT_TYPE
     texto_resposta = respostas.get(
         dados, "Informação não encontrada no FAQ."
     )
-    texto_resposta += "\n\nSua dúvida foi resolvida? Se ainda precisar de suporte humano:"
+    texto_resposta += "\n\nSua dúvida foi resolvida? Se ainda precisar de suporte personalizado:"
 
     teclado = InlineKeyboardMarkup([
         [
@@ -140,15 +139,18 @@ async def exibir_resposta_faq(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 async def iniciar_atendimento_20(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Inicia a escuta da dúvida após clicar em Abrir Chamado."""
     query = update.callback_query
     await query.answer()
 
-    mensagem = (
-        "🎧 <b>Abertura de Chamado - AlertaSUS 2.0</b>\n\n"
-        "Por favor, digite abaixo a sua dúvida ou descreva detalhadamente o seu problema.\n\n"
-        "<i>Sua mensagem será enviada diretamente para a nossa equipe de suporte.</i>"
+    # O bot envia a mensagem pedindo para o usuário digitar a demanda
+    await query.edit_message_text(
+        text="🎧 <b>Atendimento Personalizado AlertaSUS</b>\n\n"
+             "Olá! Escreva abaixo a sua dúvida ou demanda para que nossa equipe possa te ajudar:",
+        parse_mode="HTML"
     )
+
+    # IMPORTANTE: Retorna o estado que avisa o bot para esperar o texto do usuário
+    return AGUARDANDO_MENSAGEM
 
     teclado = InlineKeyboardMarkup([
         [InlineKeyboardButton("⬅️ Voltar ao Suporte", callback_data="suporte_menu")],
@@ -163,33 +165,31 @@ async def iniciar_atendimento_20(update: Update, context: ContextTypes.DEFAULT_T
 
 
 async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Recebe a mensagem enviada pelo usuário, encaminha para o canal e encerra o fluxo."""
     user = update.effective_user
     texto_usuario = update.message.text
-
-    CANAL_SUPORTE_ID = 5242040324
+    CANAL_SUPORTE_ID = -1004479965268
 
     try:
+        # Envia a demanda do usuário para o seu canal de suporte
         await context.bot.send_message(
-            chat_id=CANAL_SUPORTE_ID,
+            chat_id=-1004479965268,  # Coloque o número fixo diretamente aqui para testar
             text=(
-                f"🚨 <b>NOVO CHAMADO - AlertaSUS_Atendimento_ao_cliente</b>\n\n"
+                f"🚨 <b>NOVO CHAMADO DE SUPORTE</b>\n\n"
                 f"• <b>Usuário:</b> {user.full_name} (@{user.username or 'Sem username'})\n"
                 f"• <b>ID do Telegram:</b> <code>{user.id}</code>\n\n"
-                f"• <b>Mensagem:</b>\n{texto_usuario}"
+                f"• <b>Mensagem do usuário:</b>\n{texto_usuario}"
             ),
             parse_mode="HTML"
         )
+        
+        # Confirma para o usuário que o chamado foi registrado com sucesso
+        await update.message.reply_text(
+            "✅ Sua mensagem foi enviada com sucesso! Em breve retornaremos."
+        )
     except Exception as e:
-        logger.error(f"[SUPORTE] ❌ Erro ao enviar chamado para o canal: {e}")
+        logger.error(f"[SUPORTE] ❌ Erro ao enviar chamado: {e}")
 
-    await update.message.reply_text(
-        "🏥 <b>[Atendimento AlertaSUS 2.0]</b>\n\n"
-        "✅ <b>Chamado aberto com sucesso!</b>\n\n"
-        "Sua solicitação foi registrada. Nossa equipe de suporte analisará o caso em breve.",
-        parse_mode="HTML"
-    )
-
+    # Encerra o fluxo de conversa após o envio
     return ConversationHandler.END
 
 
