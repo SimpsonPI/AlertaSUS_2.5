@@ -167,12 +167,14 @@ async def iniciar_atendimento_20(update: Update, context: ContextTypes.DEFAULT_T
 async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     texto_usuario = update.message.text
+    
+    # ID fixo do seu canal de suporte que testamos
     CANAL_SUPORTE_ID = -1004479965268
 
     try:
-        # Envia a demanda do usuário para o seu canal de suporte
+        # Envia a mensagem diretamente para o canal do Telegram
         await context.bot.send_message(
-            chat_id=-1004479965268,  # Coloque o número fixo diretamente aqui para testar
+            chat_id=CANAL_SUPORTE_ID,
             text=(
                 f"🚨 <b>NOVO CHAMADO DE SUPORTE</b>\n\n"
                 f"• <b>Usuário:</b> {user.full_name} (@{user.username or 'Sem username'})\n"
@@ -182,14 +184,13 @@ async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT
             parse_mode="HTML"
         )
         
-        # Confirma para o usuário que o chamado foi registrado com sucesso
+        # Responde para o usuário que deu certo
         await update.message.reply_text(
-            "✅ Sua mensagem foi enviada com sucesso! Em breve retornaremos."
+            "✅ Sua mensagem foi enviada com sucesso para nossa equipe! Aguarde que já vamos te atender."
         )
     except Exception as e:
-        logger.error(f"[SUPORTE] ❌ Erro ao enviar chamado: {e}")
+        print(f"ERRO AO ENVIAR PARA O CANAL: {e}")
 
-    # Encerra o fluxo de conversa após o envio
     return ConversationHandler.END
 
 
