@@ -87,9 +87,14 @@ async def iniciar_atendimento_callback(query):
     )
     return MENU_PRINCIPAL
 
-async def transbordo_para_atendimento(update, context):
+async def transbordo_para_atendimento(update_or_query, context):
     """Passo 4: Encaminha para o atendimento personalizado."""
-    query = update.callback_query
+    # Descobre se recebeu um Update ou diretamente uma Query de botão
+    if hasattr(update_or_query, "callback_query"):
+        query = update_or_query.callback_query
+    else:
+        query = update_or_query
+
     await query.answer()
     
     user = query.from_user
