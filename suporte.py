@@ -219,6 +219,10 @@ conv_suporte = ConversationHandler(
             CallbackQueryHandler(menu_suporte, pattern="^(suporte_menu|ir_para_suporte)$"),
             CallbackQueryHandler(cancelar_suporte, pattern="^fechar_menu$"),
         ],
+        # ADICIONE ESTE BLOCO ABAIXO:
+        AGUARDANDO_MENSAGEM: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, receber_mensagem_suporte)
+        ],
     },
     fallbacks=[]
 )
