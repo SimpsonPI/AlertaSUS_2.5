@@ -2,7 +2,18 @@ import os
 import logging
 from dotenv import load_dotenv
 from telegram.ext import Application, CommandHandler
-from suporte import conv_suporte, menu_ajuda, menu_suporte
+from suporte import (
+    conv_suporte, 
+    menu_ajuda, 
+    menu_suporte,
+    comando_cadastrar_nova,
+    comando_verificar_todos,
+    comando_verificar_especifico,
+    comando_corrigir,
+    comando_excluir,
+    comando_planos,
+    comando_privacidade
+)
 
 # Carrega as variáveis do arquivo .env
 load_dotenv()
@@ -25,10 +36,17 @@ def main():
     # Constrói a aplicação com o token seguro
     app = Application.builder().token(TOKEN_NOVO_BOT).build()
 
-    # Registra os handlers de suporte e ajuda
+    # Registra o ConversationHandler de suporte e os comandos de texto do bot
     app.add_handler(conv_suporte)
     app.add_handler(CommandHandler("ajuda", menu_ajuda))
     app.add_handler(CommandHandler("suporte", menu_suporte))
+    app.add_handler(CommandHandler("cadastrar_nova", comando_cadastrar_nova))
+    app.add_handler(CommandHandler("verificar_todos", comando_verificar_todos))
+    app.add_handler(CommandHandler("verificar_especifico", comando_verificar_especifico))
+    app.add_handler(CommandHandler("corrigir", comando_corrigir))
+    app.add_handler(CommandHandler("excluir", comando_excluir))
+    app.add_handler(CommandHandler("planos", comando_planos))
+    app.add_handler(CommandHandler("privacidade", comando_privacidade))
 
     logger.info("🎧 Bot de Atendimento e Suporte rodando com segurança!")
     

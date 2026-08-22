@@ -221,3 +221,73 @@ conv_suporte = ConversationHandler(
     },
     fallbacks=[]
 )
+
+
+# =====================================================================
+# FUNÇÕES DE AUTOATENDIMENTO PARA OS COMANDOS DO BOT
+# =====================================================================
+
+async def comando_cadastrar_nova(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Responde ao comando /cadastrar_nova."""
+    await update.message.reply_text(
+        "📌 <b>Novo Cadastro de Regulação</b>\n\n"
+        "Utilizado para realizar o cadastro de uma nova regulação no sistema, "
+        "solicitando o número do Cartão SUS (15 dígitos) ou o ID da Regulação.",
+        parse_mode="HTML"
+    )
+
+
+async def comando_verificar_todos(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Responde ao comando /verificar_todos."""
+    await update.message.reply_text(
+        "🔍 <b>Consultar Regulações Ativas</b>\n\n"
+        "Permite que o usuário consulte e visualize a lista completa de todas as suas regulações ativas no sistema.",
+        parse_mode="HTML"
+    )
+
+
+async def comando_verificar_especifico(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Responde ao comando /verificar_especifico."""
+    await update.message.reply_text(
+        "🔍 <b>Consulta Específica</b>\n\n"
+        "Utilizado para consultar os detalhes de uma regulação específica.",
+        parse_mode="HTML"
+    )
+
+
+async def comando_corrigir(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Responde ao comando /corrigir."""
+    await update.message.reply_text(
+        "✏️ <b>Correção de Cadastro</b>\n\n"
+        "Destinado à alteração ou correção de informações de uma regulação já cadastrada anteriormente.",
+        parse_mode="HTML"
+    )
+
+
+async def comando_excluir(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Responde ao comando /excluir."""
+    await update.message.reply_text(
+        "🗑️ <b>Exclusão de Regulação</b>\n\n"
+        "Utilizado para deletar o ID de regulação cadastrado pelo usuário, "
+        "apagando permanentemente o registro junto com todos os dados que constavam no cadastro.",
+        parse_mode="HTML"
+    )
+
+
+async def comando_planos(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Responde ao comando /planos."""
+    await update.message.reply_text(
+        "💳 <b>Planos e Assinaturas - AlertaSUS 2.0</b>\n\n"
+        "Permite que o usuário visualize os planos disponíveis para contratação, "
+        "verifique o plano de assinatura ativo, realize renovações ou solicite upgrades na plataforma.",
+        parse_mode="HTML"
+    )
+
+
+async def comando_privacidade(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Responde ao comando /privacidade."""
+    await update.message.reply_text(
+        "🔒 <b>Política de Privacidade - AlertaSUS 2.0</b>\n\n"
+        "Exibe as diretrizes de privacidade e termos sobre o tratamento e proteção de dados do usuário.",
+        parse_mode="HTML"
+    )
