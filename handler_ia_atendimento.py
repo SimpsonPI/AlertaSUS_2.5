@@ -33,12 +33,15 @@ async def iniciar_atendimento(update: Update, context):
     
     return MENU_PRINCIPAL
 
-async def tratar_escolha_menu(update: Update, context):
-    """Passo 2: Processa a alternativa escolhida e exibe a resposta automática correspondente."""
+async def tratar_escolha_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+
+    # ... (o código que verifica qual botão foi Clicado) ...
     
-    dados = query.data
+    # SE O BOTÃO CLICADO FOR O DE ATENDIMENTO/TRANSBORDO:
+    if query.data == "transbordo" or query.data == "iniciar_atendimento_20":
+        return await transbordo_para_atendimento(update, context)
 
     # Teclado para retornar ao menu ou encerrar
     teclado_voltar = [
@@ -87,27 +90,29 @@ async def iniciar_atendimento_callback(query):
     )
     return MENU_PRINCIPAL
 
-async def transbordo_para_atendimento(update_or_query, context):
-    """Passo 4: Encaminha para o atendimento personalizado."""
-    # Descobre se recebeu um Update ou diretamente uma Query de botão
-    if hasattr(update_or_query, "callback_query"):
-        query = update_or_query.callback_query
-    else:
-        query = update_or_query
+async def receber_mensagem_suporte(update, context):
+    user = update.effective_user
+    texto_usuario = update.message.text
+    CANAL_SUPORTE_ID = -1004479965268
 
-    await query.answer()
-    
-    user = query.from_user
-    user_nome = user.first_name or "Usuário"
-    user_id = user.id
-    username = f"@{user.username}" if user.username else "Sem username"
+    try:
+        # Envia a demanda do usuário direto para o seu canal do Telegram
+        await context.bot.send_message(
+            chat_id=CANAL_SUPORTE_ID,
+            text=(
+                f"🚨 <b>NOVO CHAMADO DE SUPORTE</b>\n\n"
+                f"• <b>Usuário:</b> {user.full_name} (@{user.username or 'Sem username'})\n"
+                f"• <b>ID do Telegram:</b> <code>{user.id}</code>\n\n"
+                f"• <b>Mensagem do usuário:</b>\n{texto_usuario}"
+            ),
+            parse_mode="HTML"
+        )
+        
+        # Confirma para o usuário
+        await update.message.reply_text(
+            "✅ Sua mensagem foi enviada com sucesso! Em breve nossa equipe retornará por aqui."
+        )
+    except Exception as e:
+        print(f"Erro ao enviar para o canal: {e}")
 
-    await query.edit_message_text(
-        text="✅ <b>Solicitação registrada!</b>\n\n"
-             "Aguarde, escreva abaixo a sua dúvida ou demanda para que nossa equipe receba por aqui.",
-        parse_mode="HTML"
-    )
-
-    logger.info(f"🚨 TRANSBORDO SOLICITADO - Usuário: {user_nome} ({username}) | ID: {user_id}")
-    
-    return AGUARDANDO_MENSAGEM
+    return ConversationHandler.END
