@@ -1,7 +1,7 @@
 import os
 import logging
 from dotenv import load_dotenv
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
 from suporte import (
     conv_suporte, 
     menu_ajuda, 
@@ -13,7 +13,9 @@ from suporte import (
     comando_excluir,
     comando_planos,
     comando_privacidade,
-    responder_chamado_canal
+    botao_canal_callback,
+    enviar_resposta_admin,
+    AGUARDANDO_RESPOSTA_ADMIN
 )
 
 # Carrega as variáveis do arquivo .env
@@ -37,9 +39,14 @@ def main():
     # Inicializa a aplicação do bot
     app = Application.builder().token(TOKEN_NOVO_BOT).build()
 
-    # Registra o ConversationHandler de suporte e o ouvinte de Reply do canal
+    # Registra o ConversationHandler de suporte principal
     app.add_handler(conv_suporte)
-    app.add_handler(MessageHandler(filters.Chat(-1004479965268) & filters.TEXT & ~filters.COMMAND, responder_chamado_canal))
+
+    # Handler global para gerenciar os cliques nos botões do canal (Responder / Concluir)
+    app.add_handler(CallbackQueryHandler(botao_canal_callback, pattern="^(resp_|concluir_)"))
+
+    # Handler para capturar o texto digitado pelo administrador após clicar em "Responder Usuário"
+    app.add_handler(MessageHandler(filters.Chat(-1004479965268) & filters.TEXT & ~filters.COMMAND, enviar_resposta_admin))
 
     # Registra os demais comandos do bot
     app.add_handler(CommandHandler("ajuda", menu_ajuda))
