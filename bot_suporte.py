@@ -1,7 +1,7 @@
 import os
 import logging
 from dotenv import load_dotenv
-from telegram.ext import Application, CommandHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from suporte import (
     conv_suporte, 
     menu_ajuda, 
@@ -12,7 +12,8 @@ from suporte import (
     comando_corrigir,
     comando_excluir,
     comando_planos,
-    comando_privacidade
+    comando_privacidade,
+    responder_chamado_canal
 )
 
 # Carrega as variáveis do arquivo .env
@@ -33,11 +34,14 @@ def main():
         print("Erro: A variável TELEGRAM_TOKEN_SUPORTE não foi encontrada no arquivo .env!")
         return
 
-    # Constrói a aplicação com o token seguro
+    # Inicializa a aplicação do bot
     app = Application.builder().token(TOKEN_NOVO_BOT).build()
 
-    # Registra o ConversationHandler de suporte e os comandos de texto do bot
+    # Registra o ConversationHandler de suporte e o ouvinte de Reply do canal
     app.add_handler(conv_suporte)
+    app.add_handler(MessageHandler(filters.Chat(-1004479965268) & filters.TEXT & ~filters.COMMAND, responder_chamado_canal))
+
+    # Registra os demais comandos do bot
     app.add_handler(CommandHandler("ajuda", menu_ajuda))
     app.add_handler(CommandHandler("suporte", menu_suporte))
     app.add_handler(CommandHandler("cadastrar_nova", comando_cadastrar_nova))

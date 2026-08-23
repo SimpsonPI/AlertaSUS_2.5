@@ -235,3 +235,41 @@ async def comando_planos(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def comando_privacidade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🔒 Política de Privacidade", parse_mode="HTML")
+
+    async def responder_chamado_canal(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Captura a resposta dada via Reply no canal de suporte e envia para o usuário."""
+    message = update.message
+    CANAL_SUPORTE_ID = -1004479965268
+
+    # Garante que a mensagem é do canal de suporte e é um reply (resposta a outra mensagem)
+    if message.chat.id != CANAL_SUPORTE_ID or not message.reply_to_message:
+        return
+
+    texto_original = message.reply_to_message.text or message.reply_to_message.caption or ""
+    
+    # Procura pelo ID do Telegram escondido na tag <code> do card do chamado
+    import re
+    match = re.search(r"ID do Telegram:\s*<code>(\d+)<\/code>", texto_original)
+    
+    if not match:
+        match = re.search(r"ID do Telegram:\s*(\d+)", texto_original)
+
+    if not match:
+        await message.reply_text("⚠️ Não foi possível identificar o ID do usuário nesta mensagem.")
+        return
+
+    user_id = int(match.group(1))
+    resposta_admin = message.text
+
+    try:
+        # Envia a sua resposta direto para o chat privado do cidadão
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"💬 <b>Atendimento AlertaSUS:</b>\n\n{resposta_admin}",
+            parse_mode="HTML"
+        )
+        # Reage com um joinha (👍) na sua mensagem do canal para confirmar que foi entregue
+        await message.react([{"type": "emoji", "emoji": "👍"}])
+    except Exception as e:
+        print(f"Erro ao responder o usuário: {e}")
+        await message.reply_text(f"❌ Erro ao enviar mensagem para o usuário: {e}")
