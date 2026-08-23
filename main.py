@@ -64,7 +64,7 @@ from suporte import (
     exibir_resposta_faq,
     iniciar_atendimento,
     menu_suporte,
-    receber_mensagem_suporte,
+    receber_mensagem_usuario,
 )
 # Configuração de Logs
 logging.basicConfig(
