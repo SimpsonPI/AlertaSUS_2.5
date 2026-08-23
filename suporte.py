@@ -17,8 +17,11 @@ logger = logging.getLogger(__name__)
 AGUARDANDO_MENSAGEM = 1
 AGUARDANDO_RESPOSTA_ADMIN = 2
 
-# Dicionário para armazenar o ID da mensagem do canal de cada usuário: {user_id: message_id_no_canal}
+# Dicionários para gerenciar os chamados e o histórico de mensagens:
+# CHAMADOS_ATIVOS = {user_id: message_id_no_canal}
 CHAMADOS_ATIVOS = {}
+# HISTORICO_MENSAGENS = {user_id: [lista_de_mensagens]}
+HISTORICO_MENSAGENS = {}
 
 
 async def menu_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -165,6 +168,15 @@ async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT
     texto_usuario = update.message.text
     CANAL_SUPORTE_ID = -1004479965268
 
+    # Inicializa ou adiciona ao histórico do usuário
+    if user.id not in HISTORICO_MENSAGENS:
+        HISTORICO_MENSAGENS[user.id] = []
+    
+    HISTORICO_MENSAGENS[user.id].append(texto_usuario)
+
+    # Monta o histórico acumulado (exibe todas as mensagens enviadas)
+    historico_texto = "\n".join([f"• <i>{msg}</i>" for msg in HISTORICO_MENSAGENS[user.id]])
+
     teclado_canal = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("✍️ Responder Usuário", callback_data=f"resp_{user.id}"),
@@ -176,15 +188,14 @@ async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT
         f"🚨 <b>CHAMADO DE SUPORTE ATIVO</b>\n\n"
         f"• <b>Usuário:</b> {user.full_name} (@{user.username or 'Sem username'})\n"
         f"• <b>ID do Telegram:</b> <code>{user.id}</code>\n\n"
-        f"• <b>Última Mensagem:</b>\n<i>{texto_usuario}</i>"
+        f"• <b>Mensagens do Usuário:</b>\n{historico_texto}"
     )
 
     try:
-        # Verifica se já existe um chamado aberto para este usuário no canal
         if user.id in CHAMADOS_ATIVOS:
             msg_id_canal = CHAMADOS_ATIVOS[user.id]
             try:
-                # Apenas atualiza a mensagem existente no canal (sem criar outra)
+                # Atualiza a mensagem existente no canal somando o histórico
                 await context.bot.edit_message_text(
                     chat_id=CANAL_SUPORTE_ID,
                     message_id=msg_id_canal,
@@ -193,13 +204,11 @@ async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT
                     reply_markup=teclado_canal
                 )
             except Exception:
-                # Se por algum motivo a mensagem foi apagada no canal, cria uma nova
                 nova_msg = await context.bot.send_message(
                     chat_id=CANAL_SUPORTE_ID, text=texto_chamado, parse_mode="HTML", reply_markup=teclado_canal
                 )
                 CHAMADOS_ATIVOS[user.id] = nova_msg.message_id
         else:
-            # Cria o primeiro chamado para este usuário no canal
             nova_msg = await context.bot.send_message(
                 chat_id=CANAL_SUPORTE_ID, text=texto_chamado, parse_mode="HTML", reply_markup=teclado_canal
             )
@@ -224,9 +233,9 @@ async def cancelar_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     query = update.callback_query
     
-    # Remove dos chamados ativos se houver
-    if user and user.id in CHAMADOS_ATIVOS:
+    if user:
         CHAMADOS_ATIVOS.pop(user.id, None)
+        HISTORICO_MENSAGENS.pop(user.id, None)
 
     if query:
         await query.answer()
@@ -265,9 +274,9 @@ async def botao_canal_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         except Exception as e:
             print(f"Erro ao avisar usuário sobre conclusão: {e}")
 
-        # Remove da lista de ativos
-        if user_id in CHAMADOS_ATIVOS:
-            CHAMADOS_ATIVOS.pop(user_id, None)
+        # Limpa dos registros ativos e histórico
+        CHAMADOS_ATIVOS.pop(user_id, None)
+        HISTORICO_MENSAGENS.pop(user_id, None)
 
         await query.edit_message_text(
             text=query.message.text + "\n\n<b>[✅ CHAMADO CONCLUÍDO]</b>",
