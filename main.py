@@ -60,8 +60,7 @@ from handler_admin import (
 from handler_pagamento import gerar_pagamento_pix
 from suporte import (
     AGUARDANDO_MENSAGEM,
-    cancelar_suporte,
-    conv_suporte,
+    menu_suporte,
     exibir_resposta_faq,
     iniciar_atendimento_20,
     menu_suporte,

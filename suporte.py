@@ -13,6 +13,9 @@ from config import (
     MSG_ATENDIMENTO_ENCERRADO,
 )
 
+# Defina o estado caso ele venha do config ou diretamente aqui:
+AGUARDANDO_MENSAGEM = 1
+
 filterwarnings(action="ignore", message=r".*CallbackQueryHandler", category=PTBUserWarning)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
