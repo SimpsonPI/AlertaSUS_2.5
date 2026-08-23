@@ -168,11 +168,9 @@ async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT
     texto_usuario = update.message.text
     CANAL_SUPORTE_ID = -1004479965268
 
-    # Inicializa o histórico se não existir
     if user.id not in HISTORICO_CONVERSA:
         HISTORICO_CONVERSA[user.id] = ""
 
-    # Adiciona a mensagem da usuária ao histórico unificado
     HISTORICO_CONVERSA[user.id] += f"\n👤 <b>Usuário:</b> {texto_usuario}"
 
     teclado_canal = InlineKeyboardMarkup([
@@ -287,25 +285,22 @@ async def enviar_resposta_admin(update: Update, context: ContextTypes.DEFAULT_TY
     CANAL_SUPORTE_ID = -1004479965268
 
     if not user_id_str:
-        return  # Ignora se o admin mandou texto no canal sem clicar em responder
+        return
 
     user_id = int(user_id_str)
 
     try:
-        # Envia a resposta do suporte diretamente para a janela da usuária
         await context.bot.send_message(
             chat_id=user_id,
             text=f"💬 <b>Suporte AlertaSUS:</b>\n\n{resposta}",
             parse_mode="HTML"
         )
 
-        # Atualiza o histórico unificado da conversa com a resposta do atendente
         if user_id not in HISTORICO_CONVERSA:
             HISTORICO_CONVERSA[user_id] = ""
         
         HISTORICO_CONVERSA[user_id] += f"\n🤖 <b>Suporte:</b> {resposta}"
 
-        # Atualiza o card no canal com o histórico completo (usuário + suporte)
         if user_id in CHAMADOS_ATIVOS:
             msg_id_canal = CHAMADOS_ATIVOS[user_id]
             teclado_canal = InlineKeyboardMarkup([
@@ -335,7 +330,30 @@ async def enviar_resposta_admin(update: Update, context: ContextTypes.DEFAULT_TY
     context.chat_data.pop("atendendo_user_id", None)
 
 
-# Declaração do ConversationHandler do Bot de Usuário
+# Funções de comandos auxiliares exigidas pelo bot_suporte.py
+async def comando_cadastrar_nova(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("📌 Novo Cadastro de Regulação", parse_mode="HTML")
+
+async def comando_verificar_todos(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🔍 Consultar Regulações Ativas", parse_mode="HTML")
+
+async def comando_verificar_especifico(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🔍 Consulta Específica", parse_mode="HTML")
+
+async def comando_corrigir(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("✏️ Correção de Cadastro", parse_mode="HTML")
+
+async def comando_excluir(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🗑️ Exclusão de Regulação", parse_mode="HTML")
+
+async def comando_planos(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("💳 Planos e Assinaturas", parse_mode="HTML")
+
+async def comando_privacidade(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🔒 Política de Privacidade", parse_mode="HTML")
+
+
+# Declaração do ConversationHandler com per_message=True
 conv_suporte = ConversationHandler(
     entry_points=[MessageHandler(filters.TEXT & ~filters.COMMAND, iniciar_atendimento)],
     states={
@@ -353,5 +371,6 @@ conv_suporte = ConversationHandler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, receber_mensagem_suporte)
         ],
     },
-    fallbacks=[]
+    fallbacks=[],
+    per_message=True
 )
