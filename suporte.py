@@ -171,12 +171,13 @@ async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT
         )
         
         await update.message.reply_text(
-            "✅ Sua mensagem foi enviada com sucesso para nossa equipe! Aguarde que já vamos te atender."
+            "✅ Mensagem enviada! Pode continuar digitando suas dúvidas por aqui. Quando quiser encerrar, digite /sair."
         )
     except Exception as e:
         print(f"ERRO AO ENVIAR PARA O CANAL: {e}")
 
-    return ConversationHandler.END
+    # Mantém o usuário no estado de atendimento aberto para mensagens contínuas
+    return AGUARDANDO_MENSAGEM
 
 
 async def cancelar_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -192,7 +193,7 @@ async def cancelar_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
-# Declaração do ConversationHandler integrando o estado de espera de mensagem
+# Declaração correta do ConversationHandler com suporte ao /sair e chat contínuo
 conv_suporte = ConversationHandler(
     entry_points=[MessageHandler(filters.TEXT & ~filters.COMMAND, iniciar_atendimento)],
     states={
@@ -205,6 +206,7 @@ conv_suporte = ConversationHandler(
             CallbackQueryHandler(cancelar_suporte, pattern="^fechar_menu$"),
         ],
         AGUARDANDO_MENSAGEM: [
+            CommandHandler("sair", cancelar_suporte),
             MessageHandler(filters.TEXT & ~filters.COMMAND, receber_mensagem_suporte)
         ],
     },
