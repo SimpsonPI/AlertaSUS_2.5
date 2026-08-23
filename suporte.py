@@ -142,23 +142,10 @@ async def iniciar_atendimento_20(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     await query.answer()
 
-    # O bot envia a mensagem pedindo para o usuário digitar a demanda
     await query.edit_message_text(
         text="🎧 <b>Atendimento Personalizado AlertaSUS</b>\n\n"
              "Olá! Escreva abaixo a sua dúvida ou demanda para que nossa equipe possa te ajudar:",
         parse_mode="HTML"
-    )
-
-    # IMPORTANTE: Retorna o estado que avisa o bot para esperar o texto do usuário
-    return AGUARDANDO_MENSAGEM
-
-    teclado = InlineKeyboardMarkup([
-        [InlineKeyboardButton("⬅️ Voltar ao Suporte", callback_data="suporte_menu")],
-        [InlineKeyboardButton("❌ Fechar", callback_data="fechar_menu")],
-    ])
-
-    await query.edit_message_text(
-        mensagem, parse_mode="HTML", reply_markup=teclado
     )
 
     return AGUARDANDO_MENSAGEM
@@ -168,11 +155,10 @@ async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT
     user = update.effective_user
     texto_usuario = update.message.text
     
-    # ID fixo do seu canal de suporte que testamos
+    # ID fixo do canal de suporte
     CANAL_SUPORTE_ID = -1004479965268
 
     try:
-        # Envia a mensagem diretamente para o canal do Telegram
         await context.bot.send_message(
             chat_id=CANAL_SUPORTE_ID,
             text=(
@@ -184,7 +170,6 @@ async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT
             parse_mode="HTML"
         )
         
-        # Responde para o usuário que deu certo
         await update.message.reply_text(
             "✅ Sua mensagem foi enviada com sucesso para nossa equipe! Aguarde que já vamos te atender."
         )
@@ -207,7 +192,7 @@ async def cancelar_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
-# Declaração correta e única do fluxo conversacional do suporte
+# Declaração do ConversationHandler integrando o estado de espera de mensagem
 conv_suporte = ConversationHandler(
     entry_points=[MessageHandler(filters.TEXT & ~filters.COMMAND, iniciar_atendimento)],
     states={
@@ -219,7 +204,6 @@ conv_suporte = ConversationHandler(
             CallbackQueryHandler(menu_suporte, pattern="^(suporte_menu|ir_para_suporte)$"),
             CallbackQueryHandler(cancelar_suporte, pattern="^fechar_menu$"),
         ],
-        # ADICIONE ESTE BLOCO ABAIXO:
         AGUARDANDO_MENSAGEM: [
             MessageHandler(filters.TEXT & ~filters.COMMAND, receber_mensagem_suporte)
         ],
@@ -228,71 +212,24 @@ conv_suporte = ConversationHandler(
 )
 
 
-# =====================================================================
-# FUNÇÕES DE AUTOATENDIMENTO PARA OS COMANDOS DO BOT
-# =====================================================================
-
+# Funções de autoatendimento para os comandos do bot
 async def comando_cadastrar_nova(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Responde ao comando /cadastrar_nova."""
-    await update.message.reply_text(
-        "📌 <b>Novo Cadastro de Regulação</b>\n\n"
-        "Utilizado para realizar o cadastro de uma nova regulação no sistema, "
-        "solicitando o número do Cartão SUS (15 dígitos) ou o ID da Regulação.",
-        parse_mode="HTML"
-    )
-
+    await update.message.reply_text("📌 Novo Cadastro de Regulação", parse_mode="HTML")
 
 async def comando_verificar_todos(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Responde ao comando /verificar_todos."""
-    await update.message.reply_text(
-        "🔍 <b>Consultar Regulações Ativas</b>\n\n"
-        "Permite que o usuário consulte e visualize a lista completa de todas as suas regulações ativas no sistema.",
-        parse_mode="HTML"
-    )
-
+    await update.message.reply_text("🔍 Consultar Regulações Ativas", parse_mode="HTML")
 
 async def comando_verificar_especifico(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Responde ao comando /verificar_especifico."""
-    await update.message.reply_text(
-        "🔍 <b>Consulta Específica</b>\n\n"
-        "Utilizado para consultar os detalhes de uma regulação específica.",
-        parse_mode="HTML"
-    )
-
+    await update.message.reply_text("🔍 Consulta Específica", parse_mode="HTML")
 
 async def comando_corrigir(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Responde ao comando /corrigir."""
-    await update.message.reply_text(
-        "✏️ <b>Correção de Cadastro</b>\n\n"
-        "Destinado à alteração ou correção de informações de uma regulação já cadastrada anteriormente.",
-        parse_mode="HTML"
-    )
-
+    await update.message.reply_text("✏️ Correção de Cadastro", parse_mode="HTML")
 
 async def comando_excluir(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Responde ao comando /excluir."""
-    await update.message.reply_text(
-        "🗑️ <b>Exclusão de Regulação</b>\n\n"
-        "Utilizado para deletar o ID de regulação cadastrado pelo usuário, "
-        "apagando permanentemente o registro junto com todos os dados que constavam no cadastro.",
-        parse_mode="HTML"
-    )
-
+    await update.message.reply_text("🗑️ Exclusão de Regulação", parse_mode="HTML")
 
 async def comando_planos(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Responde ao comando /planos."""
-    await update.message.reply_text(
-        "💳 <b>Planos e Assinaturas - AlertaSUS 2.0</b>\n\n"
-        "Permite que o usuário visualize os planos disponíveis para contratação, "
-        "verifique o plano de assinatura ativo, realize renovações ou solicite upgrades na plataforma.",
-        parse_mode="HTML"
-    )
-
+    await update.message.reply_text("💳 Planos e Assinaturas", parse_mode="HTML")
 
 async def comando_privacidade(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Responde ao comando /privacidade."""
-    await update.message.reply_text(
-        "🔒 <b>Política de Privacidade - AlertaSUS 2.0</b>\n\n"
-        "Exibe as diretrizes de privacidade e termos sobre o tratamento e proteção de dados do usuário.",
-        parse_mode="HTML"
-    )
+    await update.message.reply_text("🔒 Política de Privacidade", parse_mode="HTML")

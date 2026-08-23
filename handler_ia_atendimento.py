@@ -14,7 +14,6 @@ async def iniciar_atendimento(update: Update, context):
 
     user_nome = update.effective_user.first_name or "Usuário"
     
-    # Teclado inline com as perguntas direcionadas e a opção de atendimento personalizado
     teclado = [
         [InlineKeyboardButton("1️⃣ Como consultar minha regulação?", callback_data="opcao_1")],
         [InlineKeyboardButton("2️⃣ Prazos para exames e consultas", callback_data="opcao_2")],
@@ -37,19 +36,8 @@ async def tratar_escolha_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     query = update.callback_query
     await query.answer()
 
-    # Verifica o botão clicado
-    if query.data == "transbordo" or query.data == "iniciar_atendimento_20":
-        return await transbordo_para_atendimento(update, context)
-    
-    elif query.data == "opcao_1":
-        # ... coloque o código da sua opção aqui com os devidos espaços ...
-        pass
-    
-    # SE O BOTÃO CLICADO FOR O DE ATENDIMENTO/TRANSBORDO:
-    if query.data == "transbordo" or query.data == "iniciar_atendimento_20":
-        return await transbordo_para_atendimento(update, context)
+    dados = query.data
 
-    # Teclado para retornar ao menu ou encerrar
     teclado_voltar = [
         [InlineKeyboardButton("⬅️ Voltar ao Menu", callback_data="voltar_menu"),
          InlineKeyboardButton("👤 Atendimento Personalizado", callback_data="personalizado")]
@@ -73,8 +61,15 @@ async def tratar_escolha_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
     elif dados == "voltar_menu":
         return await iniciar_atendimento_callback(query)
-    elif dados == "personalizado":
-        return await transbordo_para_atendimento(query, context)
+    elif dados == "personalizado" or dados == "transbordo" or dados == "iniciar_atendimento_20":
+        # Aciona o transbordo e muda para o estado que aguarda a mensagem do usuário
+        from suporte import AGUARDANDO_MENSAGEM
+        await query.edit_message_text(
+            text="🎧 <b>Atendimento Personalizado AlertaSUS</b>\n\n"
+                 "Escreva abaixo a sua dúvida ou demanda para que nossa equipe receba por aqui:",
+            parse_mode="HTML"
+        )
+        return AGUARDANDO_MENSAGEM
     else:
         resposta = "Opção inválida."
 
