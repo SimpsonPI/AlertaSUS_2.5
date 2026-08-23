@@ -6,19 +6,22 @@ from supabase import create_client, Client
 # Carrega o arquivo .env explicitamente
 load_dotenv(override=True)
 
-import os
+# ==================== CONFIGURAÇÕES PRINCIPAIS ====================
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "5242040324"))
 
-# IDs de Administração
+# ==================== IDs DE ADMINISTRAÇÃO ====================
+
 raw_admin_id = os.getenv("ADMIN_CHAT_ID", "5444152614").strip()
 ADMIN_CHAT_ID = int(raw_admin_id) if raw_admin_id.isdigit() else None
 
 raw_admin_ids = os.getenv("ADMIN_IDS", "5242040324").strip()
 ADMIN_IDS = [int(x.strip()) for x in raw_admin_ids.split(",") if x.strip().isdigit()]
+
+# ==================== CONFIGURAÇÕES DE API E SERVIDOR ====================
 
 SCRAPER_KEY = os.getenv("SCRAPER_KEY")
 PORT = int(os.getenv("PORT", 10000))
@@ -26,16 +29,184 @@ PORT = int(os.getenv("PORT", 10000))
 # URL Base do Formulário WebApp no GitHub Pages
 URL_FORMULARIO_PAGES = "https://simpsonpi.github.io/alerta-sus-bot/"
 
-# Validação das variáveis obrigatórias
+# ==================== VALIDAÇÃO DAS VARIÁVEIS OBRIGATÓRIAS ====================
+
 if not TELEGRAM_BOT_TOKEN or not SUPABASE_URL or not SUPABASE_KEY:
     raise ValueError("⚠️ ERRO CRÍTICO: Variáveis TELEGRAM_BOT_TOKEN, SUPABASE_URL ou SUPABASE_KEY não configuradas no arquivo .env!")
 
-# Cliente Supabase
+# ==================== CLIENTE SUPABASE ====================
+
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Configurações Globais
+# ==================== CONFIGURAÇÕES GLOBAIS ====================
+
 FUSO_HORARIO = ZoneInfo("America/Fortaleza")
 URL_BUSCA_FMS = "https://agendamentos.sus.fms.pmt.pi.gov.br/detail_scheduling/index"
 
 BOT_APP = None
 MAIN_LOOP = None
+
+# ==================== CONFIGURAÇÕES DO BOT DE SUPORTE ====================
+
+# Token do bot de suporte (deve estar no arquivo .env)
+TELEGRAM_TOKEN_SUPORTE = os.getenv("TELEGRAM_TOKEN_SUPORTE", "")
+
+# ID do canal de suporte no Telegram
+CANAL_SUPORTE_ID = -1004479965268
+
+# ==================== ESTADOS DO CONVERSATIONHANDLER ====================
+
+# Estados principais do fluxo de atendimento
+MENU_PRINCIPAL = 0              # Menu inicial com FAQ e opções
+AGUARDANDO_MENSAGEM = 1         # Aguardando mensagem do usuário
+AGUARDANDO_RESPOSTA_ADMIN = 2   # Aguardando resposta do administrador
+AGUARDANDO_FAQ = 3              # Navegando pelo FAQ
+
+# ==================== MENSAGENS DO SISTEMA ====================
+
+# Mensagens de confirmação e status
+MSG_RESPOSTA_ENVIADA = "✅ Resposta enviada com sucesso para o usuário!"
+MSG_ATENDIMENTO_ENCERRADO = "❌ Atendimento encerrado. Se precisar de algo, acesse o menu novamente!"
+MSG_MODAL_RESPOSTA = "✍️ <b>Modo de Resposta Ativado</b> para o ID: <code>{user_id}</code>\n\nDigite a mensagem que deseja enviar para este usuário agora:"
+
+# Mensagens de boas-vindas e menu
+MSG_BOAS_VINDAS = (
+    "🤖 <b>Central de Atendimento ao Usuário AlertaSUS 2.0</b>\n\n"
+    "Seja bem-vindo(a)! Como posso ajudá-lo hoje?\n\n"
+    "🔹 <b>Menu Principal:</b>\n"
+    "• /ajuda - Perguntas Frequentes (FAQ)\n"
+    "• /suporte - Falar com a equipe de suporte\n"
+    "• /planos - Gerenciar planos e assinatura\n"
+    "• /privacidade - Política de privacidade"
+)
+
+MSG_SUPORTE_INICIAL = (
+    "🎧 <b>Central de Suporte e Atendimento AlertaSUS 2.0</b>\n\n"
+    "Escolha uma opção abaixo para começar:"
+)
+
+MSG_ATENDIMENTO_INICIADO = (
+    "🎧 <b>Atendimento Personalizado AlertaSUS</b>\n\n"
+    "Olá! Escreva abaixo a sua dúvida ou demanda para que nossa equipe receba por aqui:\n\n"
+    "✏️ <i>Digite sua mensagem agora...</i>"
+)
+
+# ==================== CONFIGURAÇÕES DE SEGURANÇA ====================
+
+# Tempo máximo de inatividade (em segundos) antes de encerrar um chamado
+TIMEOUT_ATENDIMENTO = 3600  # 1 hora
+
+# Número máximo de tentativas de envio de mensagem
+MAX_TENTATIVAS_ENVIO = 3
+
+# ==================== CONFIGURAÇÕES DO BANCO DE DADOS ====================
+
+# Nomes das tabelas no Supabase
+TABELA_USUARIOS = "usuarios"
+TABELA_REGULACOES = "regulacoes"
+TABELA_CHAMADOS = "chamados_suporte"
+TABELA_HISTORICO = "historico_atendimento"
+
+# ==================== FUNÇÕES AUXILIARES ====================
+
+def is_admin(user_id: int) -> bool:
+    """
+    Verifica se um usuário é administrador
+    
+    Args:
+        user_id: ID do usuário do Telegram
+        
+    Returns:
+        bool: True se for administrador, False caso contrário
+    """
+    return user_id in ADMIN_IDS or user_id == ADMIN_CHAT_ID
+
+def get_fuso_horario():
+    """
+    Retorna o fuso horário configurado
+    
+    Returns:
+        ZoneInfo: Objeto ZoneInfo com o fuso horário
+    """
+    return FUSO_HORARIO
+
+def get_supabase_client() -> Client:
+    """
+    Retorna o cliente Supabase configurado
+    
+    Returns:
+        Client: Cliente Supabase
+    """
+    return supabase
+
+# ==================== VALIDAÇÃO ADICIONAL ====================
+
+# Verifica se o token do bot de suporte está configurado
+if not TELEGRAM_TOKEN_SUPORTE:
+    print("⚠️ AVISO: TELEGRAM_TOKEN_SUPORTE não configurado. O bot de suporte pode não funcionar.")
+
+# Verifica se o ID do canal é válido
+if CANAL_SUPORTE_ID >= 0:
+    print("⚠️ AVISO: CANAL_SUPORTE_ID parece ser um ID de grupo positivo. Certifique-se de que é um ID de canal/chat válido.")
+
+# ==================== EXPORTAÇÕES ====================
+
+# Lista de todas as variáveis exportadas para facilitar a importação
+__all__ = [
+    # Configurações principais
+    'SUPABASE_URL',
+    'SUPABASE_KEY',
+    'TELEGRAM_BOT_TOKEN',
+    'ADMIN_ID',
+    
+    # IDs de administração
+    'ADMIN_CHAT_ID',
+    'ADMIN_IDS',
+    
+    # Configurações de API e servidor
+    'SCRAPER_KEY',
+    'PORT',
+    'URL_FORMULARIO_PAGES',
+    
+    # Cliente Supabase
+    'supabase',
+    
+    # Configurações globais
+    'FUSO_HORARIO',
+    'URL_BUSCA_FMS',
+    'BOT_APP',
+    'MAIN_LOOP',
+    
+    # Configurações do bot de suporte
+    'TELEGRAM_TOKEN_SUPORTE',
+    'CANAL_SUPORTE_ID',
+    
+    # Estados do ConversationHandler
+    'MENU_PRINCIPAL',
+    'AGUARDANDO_MENSAGEM',
+    'AGUARDANDO_RESPOSTA_ADMIN',
+    'AGUARDANDO_FAQ',
+    
+    # Mensagens do sistema
+    'MSG_RESPOSTA_ENVIADA',
+    'MSG_ATENDIMENTO_ENCERRADO',
+    'MSG_MODAL_RESPOSTA',
+    'MSG_BOAS_VINDAS',
+    'MSG_SUPORTE_INICIAL',
+    'MSG_ATENDIMENTO_INICIADO',
+    
+    # Configurações de segurança
+    'TIMEOUT_ATENDIMENTO',
+    'MAX_TENTATIVAS_ENVIO',
+    
+    # Configurações do banco de dados
+    'TABELA_USUARIOS',
+    'TABELA_REGULACOES',
+    'TABELA_CHAMADOS',
+    'TABELA_HISTORICO',
+    
+    # Funções auxiliares
+    'is_admin',
+    'get_fuso_horario',
+    'get_supabase_client',
+]

@@ -111,7 +111,7 @@ async def salvar_novo_valor(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     campo = context.user_data.get("edit_campo")
 
     try:
-        supabase.table("regulacoes").update({campo: novo_valor}).eq("numero_reg", num_reg).execute()
+        supabase.table("AlertaSUS_2.0").update({campo: novo_valor}).eq("numero_reg", num_reg).execute()
         await update.message.reply_text(f"✅ Campo <b>{campo}</b> atualizado com sucesso!", parse_mode="HTML", reply_markup=TECLADO_MENU)
     except Exception as e:
         logger.error(f"Erro ao salvar alteração no Supabase: {e}")
@@ -196,7 +196,7 @@ async def confirmar_exclusao_callback(update: Update, context: ContextTypes.DEFA
         num_reg = context.user_data.get("del_num_reg")
         user_id = update.effective_user.id
         try:
-            supabase.table("regulacoes").delete().eq("numero_reg", num_reg).eq("id_do_chat", user_id).execute()
+            supabase.table("AlertaSUS_2.0").delete().eq("numero_reg", num_reg).eq("id_do_chat", user_id).execute()
             await query.edit_message_text(f"🗑️ Regulação <b>{num_reg}</b> excluída com sucesso.", parse_mode="HTML")
         except Exception as e:
             logger.error(f"Erro ao excluir regulação no Supabase: {e}")

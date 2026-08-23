@@ -1,377 +1,631 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import (
-    CallbackQueryHandler,
-    CommandHandler,
-    ContextTypes,
-    ConversationHandler,
-    MessageHandler,
-    filters,
-)
+import asyncio
 import logging
-from handler_ia_atendimento import iniciar_atendimento, tratar_escolha_menu, MENU_PRINCIPAL
+from datetime import datetime
+from warnings import filterwarnings
 
-# Configuração de logger
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.warnings import PTBUserWarning
+from telegram.ext import ContextTypes, filters, MessageHandler, CallbackQueryHandler, CommandHandler
+
+from config import (
+    CANAL_SUPORTE_ID,
+    FUSO_HORARIO,
+    MSG_ATENDIMENTO_ENCERRADO,
+)
+
+filterwarnings(action="ignore", message=r".*CallbackQueryHandler", category=PTBUserWarning)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
-# Constantes de estados
-AGUARDANDO_MENSAGEM = 1
-AGUARDANDO_RESPOSTA_ADMIN = 2
+# ==================== DADOS COMPARTILHADOS ====================
+CHAMADOS_ATIVOS = {}        # user_id -> message_id no canal
+HISTORICO_CONVERSA = {}     # user_id -> lista de mensagens
+ULTIMA_MENSAGEM_USUARIO = {} # user_id -> message_id da última mensagem do usuário
+MODO_RESPOSTA_ADMIN = {}    # admin_id -> user_id (quem o admin está respondendo)
+LOCK_DADOS = asyncio.Lock()
 
-# Dicionários de controle:
-CHAMADOS_ATIVOS = {}
-HISTORICO_CONVERSA = {}
+
+# ==================== FUNÇÕES AUXILIARES ====================
+
+def formatar_historico(historico: list) -> str:
+    if not historico:
+        return "📝 <i>Nenhuma mensagem ainda.</i>"
+    
+    texto = ""
+    for msg in historico:
+        if msg['tipo'] == 'usuario':
+            texto += f"\n👤 <b>Você:</b> {msg['texto']}"
+        elif msg['tipo'] == 'suporte':
+            texto += f"\n💬 <b>Suporte:</b> {msg['texto']}"
+        elif msg['tipo'] == 'sistema':
+            texto += f"\n📌 {msg['texto']}"
+    return texto
+
+
+def atualizar_historico(user_id: int, tipo: str, texto: str):
+    if user_id not in HISTORICO_CONVERSA:
+        HISTORICO_CONVERSA[user_id] = []
+    
+    HISTORICO_CONVERSA[user_id].append({
+        'tipo': tipo,
+        'texto': texto,
+        'timestamp': datetime.now(FUSO_HORARIO).strftime("%H:%M")
+    })
+
+
+async def atualizar_interface_usuario(context, user_id: int, mensagem_extra: str = None):
+    """Atualiza a mensagem do usuário com o histórico"""
+    try:
+        if user_id not in HISTORICO_CONVERSA:
+            return
+        
+        historico = HISTORICO_CONVERSA[user_id]
+        
+        texto = (
+            "💬 <b>Histórico da Conversa</b>\n"
+            "━━━━━━━━━━━━━━━━\n"
+            f"{formatar_historico(historico)}\n"
+            "━━━━━━━━━━━━━━━━\n\n"
+        )
+        
+        if mensagem_extra:
+            texto += mensagem_extra
+        else:
+            texto += "✏️ <i>Digite sua mensagem abaixo:</i>"
+        
+        teclado = InlineKeyboardMarkup([
+            [InlineKeyboardButton("❌ Encerrar Atendimento", callback_data="usuario_sair")]
+        ])
+        
+        if user_id in ULTIMA_MENSAGEM_USUARIO:
+            try:
+                await context.bot.edit_message_text(
+                    chat_id=user_id,
+                    message_id=ULTIMA_MENSAGEM_USUARIO[user_id],
+                    text=texto,
+                    parse_mode="HTML",
+                    reply_markup=teclado
+                )
+            except Exception as e:
+                logger.warning(f"Não foi possível editar, enviando nova: {e}")
+                msg = await context.bot.send_message(
+                    chat_id=user_id,
+                    text=texto,
+                    parse_mode="HTML",
+                    reply_markup=teclado
+                )
+                ULTIMA_MENSAGEM_USUARIO[user_id] = msg.message_id
+        else:
+            msg = await context.bot.send_message(
+                chat_id=user_id,
+                text=texto,
+                parse_mode="HTML",
+                reply_markup=teclado
+            )
+            ULTIMA_MENSAGEM_USUARIO[user_id] = msg.message_id
+            
+    except Exception as e:
+        logger.error(f"Erro ao atualizar usuário {user_id}: {e}")
+
+
+async def atualizar_canal_suporte(context, user_id: int):
+    """Atualiza a mensagem no canal de suporte"""
+    try:
+        if user_id not in HISTORICO_CONVERSA:
+            return
+        
+        historico = HISTORICO_CONVERSA[user_id]
+        ultimas = historico[-5:] if len(historico) > 5 else historico
+        
+        try:
+            user = await context.bot.get_chat(user_id)
+            nome = user.full_name
+            username = f"@{user.username}" if user.username else "Sem username"
+        except:
+            nome = f"Usuário {user_id}"
+            username = "Sem username"
+        
+        texto = (
+            f"🚨 <b>CHAMADO DE SUPORTE ATIVO</b>\n\n"
+            f"• <b>Usuário:</b> {nome} ({username})\n"
+            f"• <b>ID:</b> <code>{user_id}</code>\n"
+            f"• <b>Status:</b> 🟢 Em atendimento\n\n"
+            f"<b>💬 Últimas mensagens:</b>\n{formatar_historico(ultimas)}\n\n"
+            f"<i>Clique em 'Responder' para enviar uma mensagem</i>"
+        )
+        
+        teclado = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("✍️ Responder Usuário", callback_data=f"resp_{user_id}"),
+                InlineKeyboardButton("✅ Concluir Chamado", callback_data=f"concluir_{user_id}")
+            ]
+        ])
+        
+        if user_id in CHAMADOS_ATIVOS:
+            try:
+                await context.bot.edit_message_text(
+                    chat_id=CANAL_SUPORTE_ID,
+                    message_id=CHAMADOS_ATIVOS[user_id],
+                    text=texto,
+                    parse_mode="HTML",
+                    reply_markup=teclado
+                )
+            except Exception as e:
+                logger.warning(f"Não foi possível editar no canal: {e}")
+                msg = await context.bot.send_message(
+                    chat_id=CANAL_SUPORTE_ID,
+                    text=texto,
+                    parse_mode="HTML",
+                    reply_markup=teclado
+                )
+                CHAMADOS_ATIVOS[user_id] = msg.message_id
+        else:
+            msg = await context.bot.send_message(
+                chat_id=CANAL_SUPORTE_ID,
+                text=texto,
+                parse_mode="HTML",
+                reply_markup=teclado
+            )
+            CHAMADOS_ATIVOS[user_id] = msg.message_id
+            
+    except Exception as e:
+        logger.error(f"Erro ao atualizar canal: {e}")
+
+
+# ==================== MENUS ====================
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando /start"""
+    texto = (
+        "🤖 <b>Bem-vindo ao AlertaSUS 2.0!</b>\n\n"
+        "Escolha uma opção abaixo:"
+    )
+    teclado = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📖 Ajuda / FAQ", callback_data="ajuda")],
+        [InlineKeyboardButton("🎧 Falar com Suporte", callback_data="ir_para_suporte")],
+    ])
+    
+    await update.message.reply_text(texto, parse_mode="HTML", reply_markup=teclado)
 
 
 async def menu_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Menu Inicial da Central de Ajuda (FAQ interativo)."""
+    """Menu de ajuda com FAQ"""
     texto = (
-        "🤖 <b>Central de Atendimento ao Usuário AlertaSUS 2.0</b>\n\n"
-        "Seja bem-vindo(a) ao nosso centro de ajuda! Selecione abaixo uma das perguntas frequentes para tirar sua dúvida instantaneamente:\n\n"
-        "<b>📌 Perguntas Frequentes (FAQ):</b>\n"
-        "1️⃣ Como cadastrar uma regulação?\n"
-        "2️⃣ Como consultar minhas regulações ativas?\n"
-        "3️⃣ Onde encontrar o número do Cartão SUS ou ID?\n"
-        "4️⃣ Como alterar meus dados de cadastro?\n"
-        "5️⃣ Como renovar ou alterar meu plano de assinatura?"
+        "🤖 <b>Central de Atendimento AlertaSUS 2.0</b>\n\n"
+        "Selecione uma opção:\n\n"
+        "1️⃣ Como cadastrar regulação?\n"
+        "2️⃣ Como consultar regulações?\n"
+        "3️⃣ Onde achar Cartão SUS/ID?\n"
+        "4️⃣ Como alterar dados?\n"
+        "5️⃣ Planos e assinatura?"
     )
-
     teclado = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("1️⃣ Cadastrar Regulação", callback_data="faq_cadastrar"),
-            InlineKeyboardButton("2️⃣ Consultar Regulações", callback_data="faq_consultar"),
-        ],
-        [
-            InlineKeyboardButton("3️⃣ Onde achar Cartão SUS/ID", callback_data="faq_id"),
-            InlineKeyboardButton("4️⃣ Alterar Dados", callback_data="faq_alterar"),
-        ],
-        [
-            InlineKeyboardButton("5️⃣ Planos e Assinatura", callback_data="faq_planos"),
-        ],
-        [
-            InlineKeyboardButton(
-                "💬 Não encontrou sua resposta? Ir para o Suporte",
-                callback_data="ir_para_suporte",
-            )
-        ],
+        [InlineKeyboardButton("1️⃣ Cadastrar", callback_data="faq_cadastrar"),
+         InlineKeyboardButton("2️⃣ Consultar", callback_data="faq_consultar")],
+        [InlineKeyboardButton("3️⃣ Cartão SUS/ID", callback_data="faq_id"),
+         InlineKeyboardButton("4️⃣ Alterar Dados", callback_data="faq_alterar")],
+        [InlineKeyboardButton("5️⃣ Planos", callback_data="faq_planos")],
+        [InlineKeyboardButton("💬 Falar com Suporte", callback_data="ir_para_suporte")],
         [InlineKeyboardButton("❌ Fechar", callback_data="fechar_menu")],
     ])
-
+    
     if update.callback_query:
         await update.callback_query.answer()
-        await update.callback_query.edit_message_text(
-            texto, parse_mode="HTML", reply_markup=teclado
-        )
-    elif update.message:
-        await update.message.reply_text(
-            texto, parse_mode="HTML", reply_markup=teclado
-        )
+        await update.callback_query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
+    else:
+        await update.message.reply_text(texto, parse_mode="HTML", reply_markup=teclado)
 
 
 async def menu_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Menu exclusivo para a Central de Suporte e Atendimento."""
-    texto = (
-        "🎧 <b>Central de Suporte e Atendimento AlertaSUS 2.0</b>\n\n"
-        "Não encontrou o que precisava na central de ajuda ou está enfrentando algum problema técnico? "
-        "Clique no botão abaixo para ir direto para o nosso Bot de Atendimento:"
-    )
-
+    """Menu principal de suporte"""
+    texto = "🎧 <b>Central de Suporte</b>\n\nEscolha uma opção:"
     teclado = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎧 Atendimento AlertaSUS", url="https://t.me/meu_atendimento_123_bot")],
-        [InlineKeyboardButton("📖 Voltar para a Central de Ajuda", callback_data="ajuda")],
+        [InlineKeyboardButton("🎧 Iniciar Atendimento", callback_data="iniciar_atendimento")],
+        [InlineKeyboardButton("📖 Voltar para Ajuda", callback_data="ajuda")],
         [InlineKeyboardButton("❌ Fechar", callback_data="fechar_menu")],
     ])
-
+    
     if update.callback_query:
-        query = update.callback_query
-        await query.answer()
-        await query.message.edit_text(texto, parse_mode="HTML", reply_markup=teclado)
-    elif update.message:
+        await update.callback_query.answer()
+        await update.callback_query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
+    else:
         await update.message.reply_text(texto, parse_mode="HTML", reply_markup=teclado)
 
 
 async def exibir_resposta_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Exibe as respostas individuais do FAQ com botão para voltar ao menu ou ir ao Suporte."""
+    """Exibe respostas do FAQ"""
     query = update.callback_query
     await query.answer()
-
-    dados = query.data
-
-    respostas = {
-        "faq_cadastrar": (
-            "📌 <b>Como cadastrar uma nova regulação?</b>\n\n"
-            "• Utilize o comando <b>/cadastrar_nova</b> no menu do bot.\n"
-            "• Digite o número do seu <b>Cartão SUS</b> (15 dígitos) ou o <b>ID da Regulação</b> solicitado.\n"
-            "• Siga as instruções na tela até a confirmação do cadastro."
-        ),
-        "faq_consultar": (
-            "🔍 <b>Como consultar minhas regulações?</b>\n\n"
-            "• Para ver todas as suas regulações: digite <b>/verificar_todos</b>.\n"
-            "• Para consultar uma regulação específica: digite <b>/verificar_especifico</b>."
-        ),
-        "faq_id": (
-            "🆔 <b>Onde encontrar o Cartão SUS ou ID da Regulação?</b>\n\n"
-            "• <b>Cartão SUS:</b> O número possui 15 dígitos e pode ser encontrado no seu cartão impresso ou no aplicativo 'Meu SUS Digital'.\n"
-            "• <b>ID da Regulação:</b> É o código de identificação fornecido pelo posto de saúde ou hospital no momento da solicitação do procedimento."
-        ),
-        "faq_alterar": (
-            "✏️ <b>Como corrigir ou alterar dados?</b>\n\n"
-            "• Para alterar informações de uma regulação já cadastrada, utilize o comando <b>/corrigir</b> e selecione o registro desejado."
-        ),
-        "faq_planos": (
-            "💳 <b>Planos e Renovação de Assinatura</b>\n\n"
-            "• Para verificar seus planos ativos, renovar ou fazer um upgrade, acesse o comando <b>/planos</b> no menu principal."
-        ),
-    }
-
-    texto_resposta = respostas.get(
-        dados, "Informação não encontrada no FAQ."
-    )
-    texto_resposta += "\n\nSua dúvida foi resolvida? Se ainda precisar de suporte personalizado:"
-
-    teclado = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(
-                "📋 Abrir Chamado de Suporte",
-                callback_data="iniciar_atendimento_20",
-            )
-        ],
-        [InlineKeyboardButton("⬅️ Voltar ao FAQ", callback_data="ajuda")],
-    ])
-
-    await query.edit_message_text(
-        texto_resposta, parse_mode="HTML", reply_markup=teclado
-    )
-
-
-async def iniciar_atendimento_20(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    teclado_usuario = InlineKeyboardMarkup([
-        [InlineKeyboardButton("❌ Encerrar Atendimento", callback_data="usuario_sair")]
-    ])
-
-    await query.edit_message_text(
-        text="🎧 <b>Atendimento Personalizado AlertaSUS</b>\n\n"
-             "Olá! Escreva abaixo a sua dúvida ou demanda para que nossa equipe receba por aqui:",
-        parse_mode="HTML",
-        reply_markup=teclado_usuario
-    )
-
-    return AGUARDANDO_MENSAGEM
-
-
-async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    texto_usuario = update.message.text
-    CANAL_SUPORTE_ID = -1004479965268
-
-    if user.id not in HISTORICO_CONVERSA:
-        HISTORICO_CONVERSA[user.id] = ""
-
-    HISTORICO_CONVERSA[user.id] += f"\n👤 <b>Usuário:</b> {texto_usuario}"
-
-    teclado_canal = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("✍️ Responder Usuário", callback_data=f"resp_{user.id}"),
-            InlineKeyboardButton("✅ Concluir Chamado", callback_data=f"concluir_{user.id}")
-        ]
-    ])
-
-    texto_chamado = (
-        f"🚨 <b>CHAMADO DE SUPORTE ATIVO</b>\n\n"
-        f"• <b>Usuário:</b> {user.full_name} (@{user.username or 'Sem username'})\n"
-        f"• <b>ID do Telegram:</b> <code>{user.id}</code>\n\n"
-        f"<b>💬 Histórico da Conversa:</b>"
-        f"{HISTORICO_CONVERSA[user.id]}"
-    )
-
-    try:
-        if user.id in CHAMADOS_ATIVOS:
-            msg_id_canal = CHAMADOS_ATIVOS[user.id]
-            try:
-                await context.bot.edit_message_text(
-                    chat_id=CANAL_SUPORTE_ID,
-                    message_id=msg_id_canal,
-                    text=texto_chamado,
-                    parse_mode="HTML",
-                    reply_markup=teclado_canal
-                )
-            except Exception:
-                nova_msg = await context.bot.send_message(
-                    chat_id=CANAL_SUPORTE_ID, text=texto_chamado, parse_mode="HTML", reply_markup=teclado_canal
-                )
-                CHAMADOS_ATIVOS[user.id] = nova_msg.message_id
-        else:
-            nova_msg = await context.bot.send_message(
-                chat_id=CANAL_SUPORTE_ID, text=texto_chamado, parse_mode="HTML", reply_markup=teclado_canal
-            )
-            CHAMADOS_ATIVOS[user.id] = nova_msg.message_id
-        
-        teclado_usuario = InlineKeyboardMarkup([
-            [InlineKeyboardButton("❌ Encerrar Atendimento", callback_data="usuario_sair")]
-        ])
-
-        await update.message.reply_text(
-            "✅ Mensagem enviada para a equipe! Pode continuar digitando se precisar.",
-            reply_markup=teclado_usuario
-        )
-    except Exception as e:
-        print(f"ERRO AO ENVIAR/ATUALIZAR NO CANAL: {e}")
-
-    return AGUARDANDO_MENSAGEM
-
-
-async def cancelar_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    query = update.callback_query
     
-    if user:
-        CHAMADOS_ATIVOS.pop(user.id, None)
-        HISTORICO_CONVERSA.pop(user.id, None)
+    respostas = {
+        "faq_cadastrar": "📌 Use /cadastrar_nova no bot principal",
+        "faq_consultar": "🔍 Use /verificar_todos ou /verificar_especifico",
+        "faq_id": "🆔 Cartão SUS: 15 dígitos no app Meu SUS Digital",
+        "faq_alterar": "✏️ Use /corrigir no bot principal",
+        "faq_planos": "💳 Use /planos no bot principal",
+    }
+    
+    texto = respostas.get(query.data, "Informação não encontrada.")
+    texto += "\n\nPrecisa de ajuda personalizada?"
+    
+    teclado = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🎧 Abrir Chamado", callback_data="iniciar_atendimento")],
+        [InlineKeyboardButton("⬅️ Voltar", callback_data="ajuda")],
+    ])
+    
+    await query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
 
-    if query:
-        await query.answer()
-        await query.edit_message_text("❌ Atendimento encerrado. Se precisar de algo, acesse o menu novamente!")
-    elif update.message:
-        await update.message.reply_text("❌ Atendimento encerrado. Se precisar de algo, acesse o menu novamente!")
 
-    return ConversationHandler.END
+# ==================== FLUXO DO USUÁRIO ====================
+
+async def iniciar_atendimento(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Inicia o atendimento personalizado"""
+    query = update.callback_query
+    await query.answer()
+    user_id = update.effective_user.id
+    
+    logger.info(f"🟢 Iniciando atendimento para {user_id}")
+    
+    async with LOCK_DADOS:
+        CHAMADOS_ATIVOS.pop(user_id, None)
+        HISTORICO_CONVERSA.pop(user_id, None)
+        ULTIMA_MENSAGEM_USUARIO.pop(user_id, None)
+        MODO_RESPOSTA_ADMIN.pop(user_id, None)
+        
+        HISTORICO_CONVERSA[user_id] = []
+        atualizar_historico(user_id, 'sistema', "🎧 Atendimento iniciado")
+    
+    texto = "🎧 <b>Atendimento AlertaSUS</b>\n\nDigite sua dúvida:"
+    teclado = InlineKeyboardMarkup([
+        [InlineKeyboardButton("❌ Encerrar", callback_data="usuario_sair")]
+    ])
+    
+    msg = await query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
+    ULTIMA_MENSAGEM_USUARIO[user_id] = msg.message_id
+    
+    await atualizar_canal_suporte(context, user_id)
 
 
-async def botao_canal_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def receber_mensagem_usuario(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Recebe mensagem do usuário (APENAS de chats privados)"""
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    # IGNORA mensagens do canal/grupo
+    if chat_id == CANAL_SUPORTE_ID:
+        return
+    
+    texto = update.message.text
+    
+    logger.info(f"📩 Usuário {user_id} (chat {chat_id}): {texto}")
+    
+    # Verifica se o usuário está em atendimento
+    if user_id not in HISTORICO_CONVERSA:
+        await update.message.reply_text(
+            "❌ Você não tem um atendimento ativo.\n\n"
+            "Use /start para iniciar um novo atendimento."
+        )
+        return
+    
+    async with LOCK_DADOS:
+        atualizar_historico(user_id, 'usuario', texto)
+        await atualizar_interface_usuario(context, user_id)
+        await atualizar_canal_suporte(context, user_id)
+
+
+async def receber_resposta_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Recebe a resposta do admin (APENAS do canal)"""
+    admin_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    resposta = update.message.text
+    
+    # SÓ processa mensagens do canal
+    if chat_id != CANAL_SUPORTE_ID:
+        return
+    
+    logger.info(f"📤 Admin {admin_id} no canal: {resposta}")
+    
+    user_id = MODO_RESPOSTA_ADMIN.get(admin_id)
+    
+    if not user_id:
+        # Se não está em modo resposta, ignora a mensagem
+        logger.info(f"⚠️ Admin {admin_id} não está em modo resposta")
+        return
+    
+    # Verifica se o chamado ainda está ativo
+    if user_id not in HISTORICO_CONVERSA:
+        await update.message.reply_text(
+            f"❌ O chamado do usuário {user_id} já foi encerrado."
+        )
+        MODO_RESPOSTA_ADMIN.pop(admin_id, None)
+        return
+    
+    logger.info(f"📤 Admin {admin_id} enviando para {user_id}: {resposta}")
+    
+    try:
+        # ENVIA A RESPOSTA PARA O USUÁRIO
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"💬 <b>Suporte:</b> {resposta}",
+            parse_mode="HTML"
+        )
+        
+        # Atualiza o histórico
+        async with LOCK_DADOS:
+            atualizar_historico(user_id, 'suporte', resposta)
+            await atualizar_interface_usuario(context, user_id)
+            await atualizar_canal_suporte(context, user_id)
+        
+        # Confirma para o admin (no canal)
+        await update.message.reply_text(
+            f"✅ Resposta enviada para <code>{user_id}</code>!\n\n"
+            f"📝 Sua mensagem: {resposta}",
+            parse_mode="HTML"
+        )
+        
+        logger.info(f"✅ Resposta de {admin_id} entregue para {user_id}")
+        
+    except Exception as e:
+        await update.message.reply_text(f"❌ Erro ao enviar: {e}")
+        logger.error(f"Erro ao enviar resposta do admin {admin_id}: {e}")
+    
+    async with LOCK_DADOS:
+        atualizar_historico(user_id, 'usuario', texto)
+        await atualizar_interface_usuario(context, user_id)
+        await atualizar_canal_suporte(context, user_id)
+
+
+async def cancelar_atendimento_usuario(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Usuário cancela o atendimento"""
+    user_id = update.effective_user.id
+    
+    logger.info(f"🔴 Usuário {user_id} encerrou atendimento")
+    
+    async with LOCK_DADOS:
+        CHAMADOS_ATIVOS.pop(user_id, None)
+        HISTORICO_CONVERSA.pop(user_id, None)
+        ULTIMA_MENSAGEM_USUARIO.pop(user_id, None)
+        MODO_RESPOSTA_ADMIN.pop(user_id, None)
+    
+    if update.callback_query:
+        await update.callback_query.answer()
+        await update.callback_query.edit_message_text(MSG_ATENDIMENTO_ENCERRADO)
+    else:
+        await update.message.reply_text(MSG_ATENDIMENTO_ENCERRADO)
+
+
+# ==================== AÇÕES DO ADMIN ====================
+
+async def callback_botoes_canal(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Gerencia os botões do canal de suporte"""
     query = update.callback_query
     await query.answer()
     data = query.data
-
+    admin_id = update.effective_user.id
+    user_id = int(data.split("_")[1])
+    
+    logger.info(f"🔄 Admin {admin_id} clicou em: {data}")
+    
     if data.startswith("resp_"):
-        user_id = data.split("_")[1]
-        context.chat_data["atendendo_user_id"] = user_id
+        # Admin quer responder
+        MODO_RESPOSTA_ADMIN[admin_id] = user_id
         
         await query.message.reply_text(
-            f"✍️ <b>Modo de Resposta Ativado</b> para o ID: <code>{user_id}</code>\n\n"
-            "Digite a mensagem que deseja enviar para este usuário agora:",
+            f"✍️ <b>Modo de resposta ativado</b>\n\n"
+            f"Respondendo para usuário <code>{user_id}</code>\n\n"
+            f"Digite sua mensagem abaixo:",
             parse_mode="HTML"
         )
-        return
-
+        
+        logger.info(f"✍️ Admin {admin_id} está respondendo {user_id}")
+        
+        # Atualiza o canal mostrando que está sendo respondido
+        try:
+            await query.edit_message_text(
+                text=query.message.text + "\n\n🔄 <i>Admin está digitando uma resposta...</i>",
+                parse_mode="HTML"
+            )
+        except:
+            pass
+    
     elif data.startswith("concluir_"):
-        user_id_str = data.split("_")[1]
-        user_id = int(user_id_str)
+        # Admin conclui o chamado
+        logger.info(f"✅ Admin {admin_id} concluiu chamado de {user_id}")
+        
+        async with LOCK_DADOS:
+            # Notifica o usuário
+            try:
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text="✅ <b>Chamado Concluído</b>\n\n"
+                         "Seu chamado foi concluído pela equipe de suporte.\n\n"
+                         "Obrigado por usar o AlertaSUS! 🙏",
+                    parse_mode="HTML"
+                )
+            except Exception as e:
+                logger.warning(f"Não foi possível notificar usuário {user_id}: {e}")
+            
+            # Limpa dados
+            CHAMADOS_ATIVOS.pop(user_id, None)
+            HISTORICO_CONVERSA.pop(user_id, None)
+            ULTIMA_MENSAGEM_USUARIO.pop(user_id, None)
+            MODO_RESPOSTA_ADMIN.pop(user_id, None)
+        
+        # Atualiza mensagem no canal
+        try:
+            await query.edit_message_text(
+                text=query.message.text + "\n\n<b>[✅ CHAMADO CONCLUÍDO]</b>",
+                parse_mode="HTML",
+                reply_markup=None
+            )
+        except:
+            pass
+
+
+async def receber_resposta_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Recebe a resposta do admin e envia para o usuário"""
+    admin_id = update.effective_user.id
+    resposta = update.message.text
+    user_id = MODO_RESPOSTA_ADMIN.get(admin_id)
+    
+    logger.info(f"📤 Admin {admin_id} respondeu: {resposta}")
+    
+    if not user_id:
+        await update.message.reply_text(
+            "❌ Você não está em modo de resposta.\n\n"
+            "Clique em 'Responder Usuário' no canal para ativar."
+        )
+        return
+    
+    # Verifica se o chamado ainda está ativo
+    if user_id not in HISTORICO_CONVERSA:
+        await update.message.reply_text(
+            f"❌ O chamado do usuário {user_id} já foi encerrado."
+        )
+        MODO_RESPOSTA_ADMIN.pop(admin_id, None)
+        return
+    
+    logger.info(f"📤 Admin {admin_id} enviando para {user_id}: {resposta}")
+    
+    try:
+        # ENVIA A RESPOSTA PARA O USUÁRIO
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"💬 <b>Suporte:</b> {resposta}",
+            parse_mode="HTML"
+        )
+        
+        # Atualiza o histórico
+        async with LOCK_DADOS:
+            atualizar_historico(user_id, 'suporte', resposta)
+            await atualizar_interface_usuario(context, user_id)
+            await atualizar_canal_suporte(context, user_id)
+        
+        # Confirma para o admin
+        await update.message.reply_text(
+            f"✅ Resposta enviada para <code>{user_id}</code>!\n\n"
+            f"📝 Sua mensagem: {resposta}",
+            parse_mode="HTML"
+        )
+        
+        logger.info(f"✅ Resposta de {admin_id} entregue para {user_id}")
+        
+    except Exception as e:
+        await update.message.reply_text(f"❌ Erro ao enviar: {e}")
+        logger.error(f"Erro ao enviar resposta do admin {admin_id}: {e}")
+
+
+async def cancelar_resposta_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin cancela o modo de resposta"""
+    admin_id = update.effective_user.id
+    MODO_RESPOSTA_ADMIN.pop(admin_id, None)
+    await update.message.reply_text("❌ Modo de resposta cancelado.")
+
+
+# ==================== COMANDOS AUXILIARES ====================
+
+async def comando_cadastrar_nova(update, context):
+    await update.message.reply_text("📌 Use /cadastrar_nova no bot principal", parse_mode="HTML")
+
+async def comando_verificar_todos(update, context):
+    await update.message.reply_text("🔍 Use /verificar_todos no bot principal", parse_mode="HTML")
+
+async def comando_verificar_especifico(update, context):
+    await update.message.reply_text("🔍 Use /verificar_especifico no bot principal", parse_mode="HTML")
+
+async def comando_corrigir(update, context):
+    await update.message.reply_text("✏️ Use /corrigir no bot principal", parse_mode="HTML")
+
+async def comando_excluir(update, context):
+    await update.message.reply_text("🗑️ Use /excluir no bot principal", parse_mode="HTML")
+
+async def comando_planos(update, context):
+    await update.message.reply_text("💳 Use /planos no bot principal", parse_mode="HTML")
+
+async def comando_privacidade(update, context):
+    await update.message.reply_text("🔒 Política de Privacidade no bot principal", parse_mode="HTML")
+
+
+async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Processa TODAS as mensagens de texto (usuário E admin)"""
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    texto = update.message.text
+    
+    # CASO 1: Mensagem do CANAL (admin respondendo)
+    if chat_id == CANAL_SUPORTE_ID:
+        admin_id = user_id
+        user_id_destino = MODO_RESPOSTA_ADMIN.get(admin_id)
+        
+        if not user_id_destino:
+            await update.message.reply_text("❌ Clique em 'Responder Usuário' primeiro.")
+            return
+        
+        if user_id_destino not in HISTORICO_CONVERSA:
+            await update.message.reply_text("❌ Chamado já encerrado.")
+            MODO_RESPOSTA_ADMIN.pop(admin_id, None)
+            return
         
         try:
             await context.bot.send_message(
-                chat_id=user_id,
-                text="✅ O seu chamado foi concluído pela equipe de suporte. Obrigado por utilizar o AlertaSUS!"
+                chat_id=user_id_destino,
+                text=f"💬 <b>Suporte:</b> {texto}",
+                parse_mode="HTML"
             )
+            
+            async with LOCK_DADOS:
+                atualizar_historico(user_id_destino, 'suporte', texto)
+                await atualizar_interface_usuario(context, user_id_destino)
+                await atualizar_canal_suporte(context, user_id_destino)
+            
+            await update.message.reply_text(f"✅ Resposta enviada para {user_id_destino}!")
+            
         except Exception as e:
-            print(f"Erro ao avisar usuário sobre conclusão: {e}")
-
-        CHAMADOS_ATIVOS.pop(user_id, None)
-        HISTORICO_CONVERSA.pop(user_id, None)
-
-        await query.edit_message_text(
-            text=query.message.text + "\n\n<b>[✅ CHAMADO CONCLUÍDO]</b>",
-            parse_mode="HTML",
-            reply_markup=None
-        )
-
-
-async def enviar_resposta_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id_str = context.chat_data.get("atendendo_user_id")
-    resposta = update.message.text
-    CANAL_SUPORTE_ID = -1004479965268
-
-    if not user_id_str:
-        return
-
-    user_id = int(user_id_str)
-
-    try:
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=f"💬 <b>Suporte AlertaSUS:</b>\n\n{resposta}",
-            parse_mode="HTML"
-        )
-
-        if user_id not in HISTORICO_CONVERSA:
-            HISTORICO_CONVERSA[user_id] = ""
+            await update.message.reply_text(f"❌ Erro: {e}")
         
-        HISTORICO_CONVERSA[user_id] += f"\n🤖 <b>Suporte:</b> {resposta}"
-
-        if user_id in CHAMADOS_ATIVOS:
-            msg_id_canal = CHAMADOS_ATIVOS[user_id]
-            teclado_canal = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("✍️ Responder Usuário", callback_data=f"resp_{user_id}"),
-                    InlineKeyboardButton("✅ Concluir Chamado", callback_data=f"concluir_{user_id}")
-                ]
-            ])
-            texto_atualizado = (
-                f"🚨 <b>CHAMADO DE SUPORTE ATIVO</b>\n\n"
-                f"• <b>ID do Telegram:</b> <code>{user_id}</code>\n\n"
-                f"<b>💬 Histórico da Conversa:</b>"
-                f"{HISTORICO_CONVERSA[user_id]}"
-            )
-            await context.bot.edit_message_text(
-                chat_id=CANAL_SUPORTE_ID,
-                message_id=msg_id_canal,
-                text=texto_atualizado,
-                parse_mode="HTML",
-                reply_markup=teclado_canal
-            )
-
-        await update.message.reply_text("✅ Resposta enviada com sucesso para o usuário!")
-    except Exception as e:
-        await update.message.reply_text(f"❌ Erro ao enviar resposta: {e}")
-
-    context.chat_data.pop("atendendo_user_id", None)
+        return
+    
+    # CASO 2: Mensagem do USUÁRIO (chat privado)
+    if user_id not in HISTORICO_CONVERSA:
+        await update.message.reply_text(
+            "❌ Você não tem um atendimento ativo.\n\nUse /start para iniciar."
+        )
+        return
+    
+    async with LOCK_DADOS:
+        atualizar_historico(user_id, 'usuario', texto)
+        await atualizar_interface_usuario(context, user_id)
+        await atualizar_canal_suporte(context, user_id)
 
 
-# Funções de comandos auxiliares
-async def comando_cadastrar_nova(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("📌 Novo Cadastro de Regulação", parse_mode="HTML")
+# ==================== HANDLERS ====================
 
-async def comando_verificar_todos(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔍 Consultar Regulações Ativas", parse_mode="HTML")
+handlers = [
+    # Comandos
+    CommandHandler("start", start),
+    CommandHandler("ajuda", menu_ajuda),
+    CommandHandler("suporte", menu_suporte),
+    CommandHandler("cadastrar_nova", comando_cadastrar_nova),
+    CommandHandler("verificar_todos", comando_verificar_todos),
+    CommandHandler("verificar_especifico", comando_verificar_especifico),
+    CommandHandler("corrigir", comando_corrigir),
+    CommandHandler("excluir", comando_excluir),
+    CommandHandler("planos", comando_planos),
+    CommandHandler("privacidade", comando_privacidade),
+    
+    # Callbacks dos menus
+    CallbackQueryHandler(exibir_resposta_faq, pattern="^faq_"),
+    CallbackQueryHandler(iniciar_atendimento, pattern="^iniciar_atendimento$"),
+    CallbackQueryHandler(menu_ajuda, pattern="^ajuda$"),
+    CallbackQueryHandler(menu_suporte, pattern="^ir_para_suporte$"),
+    CallbackQueryHandler(cancelar_atendimento_usuario, pattern="^fechar_menu$"),
+    CallbackQueryHandler(cancelar_atendimento_usuario, pattern="^usuario_sair$"),
+    
+    # Callbacks do canal
+    CallbackQueryHandler(callback_botoes_canal, pattern="^(resp_|concluir_)"),
+    
+    # Handler ÚNICO para mensagens de texto
+    MessageHandler(filters.TEXT & ~filters.COMMAND, processar_mensagem),  # <-- AGORA processar_mensagem ESTÁ DEFINIDA
+]
+# ==================== HANDLERS (para registrar no bot_suporte.py) ====================
 
-async def comando_verificar_especifico(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔍 Consulta Específica", parse_mode="HTML")
-
-async def comando_corrigir(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("✏️ Correção de Cadastro", parse_mode="HTML")
-
-async def comando_excluir(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🗑️ Exclusão de Regulação", parse_mode="HTML")
-
-async def comando_planos(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("💳 Planos e Assinaturas", parse_mode="HTML")
-
-async def comando_privacidade(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔒 Política de Privacidade", parse_mode="HTML")
-
-
-# Declaração do ConversationHandler
-conv_suporte = ConversationHandler(
-    entry_points=[
-        MessageHandler(filters.TEXT & ~filters.COMMAND, iniciar_atendimento),
-        CallbackQueryHandler(iniciar_atendimento_20, pattern="^iniciar_atendimento_20$")
-    ],
-    states={
-        MENU_PRINCIPAL: [
-            CallbackQueryHandler(tratar_escolha_menu),
-            CallbackQueryHandler(exibir_resposta_faq, pattern="^faq_"),
-            CallbackQueryHandler(iniciar_atendimento_20, pattern="^iniciar_atendimento_20$"),
-            CallbackQueryHandler(menu_ajuda, pattern="^ajuda$"),
-            CallbackQueryHandler(menu_suporte, pattern="^(suporte_menu|ir_para_suporte)$"),
-            CallbackQueryHandler(cancelar_suporte, pattern="^fechar_menu$"),
-        ],
-        AGUARDANDO_MENSAGEM: [
-            CallbackQueryHandler(cancelar_suporte, pattern="^usuario_sair$"),
-            CommandHandler("sair", cancelar_suporte),
-            MessageHandler(filters.TEXT & ~filters.COMMAND, receber_mensagem_suporte)
-        ],
-    },
-    fallbacks=[],
-    per_message=True
-)

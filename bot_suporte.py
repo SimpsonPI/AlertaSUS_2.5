@@ -1,27 +1,13 @@
 import os
 import logging
 from dotenv import load_dotenv
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
-from suporte import (
-    conv_suporte, 
-    menu_ajuda, 
-    menu_suporte,
-    comando_cadastrar_nova,
-    comando_verificar_todos,
-    comando_verificar_especifico,
-    comando_corrigir,
-    comando_excluir,
-    comando_planos,
-    comando_privacidade,
-    botao_canal_callback,
-    enviar_resposta_admin,
-    AGUARDANDO_RESPOSTA_ADMIN
-)
+from telegram.ext import Application
 
-# Carrega as variáveis do arquivo .env
+from config import TELEGRAM_TOKEN_SUPORTE
+from suporte import handlers  # Importa todos os handlers do suporte.py
+
 load_dotenv()
 
-# Configuração de logs
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", 
     level=logging.INFO
@@ -29,35 +15,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def main():
-    # Puxa o token de forma segura do ambiente
-    TOKEN_NOVO_BOT = os.getenv("TELEGRAM_TOKEN_SUPORTE")
+    TOKEN = TELEGRAM_TOKEN_SUPORTE
 
-    if not TOKEN_NOVO_BOT:
-        print("Erro: A variável TELEGRAM_TOKEN_SUPORTE não foi encontrada no arquivo .env!")
+    if not TOKEN:
+        print("Erro: TELEGRAM_TOKEN_SUPORTE não encontrado no .env!")
         return
 
-    # Inicializa a aplicação do bot
-    app = Application.builder().token(TOKEN_NOVO_BOT).build()
+    app = Application.builder().token(TOKEN).build()
 
-    # Registra o ConversationHandler de suporte principal
-    app.add_handler(conv_suporte)
-
-    # Handler global para gerenciar os cliques nos botões do canal (Responder / Concluir)
-    app.add_handler(CallbackQueryHandler(botao_canal_callback, pattern="^(resp_|concluir_)"))
-
-    # Handler para capturar o texto digitado pelo administrador após clicar em "Responder Usuário"
-    app.add_handler(MessageHandler(filters.Chat(-1004479965268) & filters.TEXT & ~filters.COMMAND, enviar_resposta_admin))
-
-    # Registra os demais comandos do bot
-    app.add_handler(CommandHandler("ajuda", menu_ajuda))
-    app.add_handler(CommandHandler("suporte", menu_suporte))
-    app.add_handler(CommandHandler("cadastrar_nova", comando_cadastrar_nova))
-    app.add_handler(CommandHandler("verificar_todos", comando_verificar_todos))
-    app.add_handler(CommandHandler("verificar_especifico", comando_verificar_especifico))
-    app.add_handler(CommandHandler("corrigir", comando_corrigir))
-    app.add_handler(CommandHandler("excluir", comando_excluir))
-    app.add_handler(CommandHandler("planos", comando_planos))
-    app.add_handler(CommandHandler("privacidade", comando_privacidade))
+    # Registra TODOS os handlers do suporte.py
+    for handler in handlers:
+        app.add_handler(handler)
 
     logger.info("🎧 Bot de Atendimento e Suporte rodando com segurança!")
     
