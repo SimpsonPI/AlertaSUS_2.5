@@ -18,9 +18,7 @@ AGUARDANDO_MENSAGEM = 1
 AGUARDANDO_RESPOSTA_ADMIN = 2
 
 # Dicionários de controle:
-# CHAMADOS_ATIVOS = {user_id: message_id_no_canal}
 CHAMADOS_ATIVOS = {}
-# HISTORICO_CONVERSA = {user_id: "Histórico formatado em texto"}
 HISTORICO_CONVERSA = {}
 
 
@@ -155,7 +153,7 @@ async def iniciar_atendimento_20(update: Update, context: ContextTypes.DEFAULT_T
 
     await query.edit_message_text(
         text="🎧 <b>Atendimento Personalizado AlertaSUS</b>\n\n"
-             "Olá! Escreva abaixo a sua dúvida ou demanda para que nossa equipe possa te ajudar:",
+             "Olá! Escreva abaixo a sua dúvida ou demanda para que nossa equipe receba por aqui:",
         parse_mode="HTML",
         reply_markup=teclado_usuario
     )
@@ -330,7 +328,7 @@ async def enviar_resposta_admin(update: Update, context: ContextTypes.DEFAULT_TY
     context.chat_data.pop("atendendo_user_id", None)
 
 
-# Funções de comandos auxiliares exigidas pelo bot_suporte.py
+# Funções de comandos auxiliares
 async def comando_cadastrar_nova(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("📌 Novo Cadastro de Regulação", parse_mode="HTML")
 
@@ -353,9 +351,12 @@ async def comando_privacidade(update: Update, context: ContextTypes.DEFAULT_TYPE
     await update.message.reply_text("🔒 Política de Privacidade", parse_mode="HTML")
 
 
-# Declaração do ConversationHandler com per_message=True
+# Declaração do ConversationHandler
 conv_suporte = ConversationHandler(
-    entry_points=[MessageHandler(filters.TEXT & ~filters.COMMAND, iniciar_atendimento)],
+    entry_points=[
+        MessageHandler(filters.TEXT & ~filters.COMMAND, iniciar_atendimento),
+        CallbackQueryHandler(iniciar_atendimento_20, pattern="^iniciar_atendimento_20$")
+    ],
     states={
         MENU_PRINCIPAL: [
             CallbackQueryHandler(tratar_escolha_menu),
