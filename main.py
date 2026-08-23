@@ -62,7 +62,7 @@ from suporte import (
     AGUARDANDO_MENSAGEM,
     menu_suporte,
     exibir_resposta_faq,
-    iniciar_atendimento_20,
+    iniciar_atendimento,
     menu_suporte,
     receber_mensagem_suporte,
 )
@@ -191,7 +191,7 @@ def main():
         )
     )
     app.add_handler(CallbackQueryHandler(exibir_resposta_faq, pattern="^faq_"))
-    app.add_handler(CallbackQueryHandler(iniciar_atendimento_20, pattern="^iniciar_atendimento_20$"))
+    app.add_handler(CallbackQueryHandler(iniciar_atendimento, pattern="^iniciar_atendimento_20$"))
     app.add_handler(CallbackQueryHandler(menu_suporte, pattern="^ajuda$"))
 
     # Handler genérico de texto para menu interativo caso necessário
