@@ -8,15 +8,17 @@ from telegram.ext import (
     filters,
 )
 import logging
-import re
 from handler_ia_atendimento import iniciar_atendimento, tratar_escolha_menu, MENU_PRINCIPAL
 
 # Configuração de logger
 logger = logging.getLogger(__name__)
 
-# Constantes de estados para o ConversationHandler
+# Constantes de estados
 AGUARDANDO_MENSAGEM = 1
-AGUARDANDO_RESPOSTA_ADMIN = 2  # Estado para o admin digitar a resposta após clicar no botão
+AGUARDANDO_RESPOSTA_ADMIN = 2
+
+# Dicionário para armazenar o ID da mensagem do canal de cada usuário: {user_id: message_id_no_canal}
+CHAMADOS_ATIVOS = {}
 
 
 async def menu_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -170,18 +172,38 @@ async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT
         ]
     ])
 
+    texto_chamado = (
+        f"🚨 <b>CHAMADO DE SUPORTE ATIVO</b>\n\n"
+        f"• <b>Usuário:</b> {user.full_name} (@{user.username or 'Sem username'})\n"
+        f"• <b>ID do Telegram:</b> <code>{user.id}</code>\n\n"
+        f"• <b>Última Mensagem:</b>\n<i>{texto_usuario}</i>"
+    )
+
     try:
-        await context.bot.send_message(
-            chat_id=CANAL_SUPORTE_ID,
-            text=(
-                f"🚨 <b>NOVO CHAMADO DE SUPORTE</b>\n\n"
-                f"• <b>Usuário:</b> {user.full_name} (@{user.username or 'Sem username'})\n"
-                f"• <b>ID do Telegram:</b> <code>{user.id}</code>\n\n"
-                f"• <b>Mensagem:</b>\n{texto_usuario}"
-            ),
-            parse_mode="HTML",
-            reply_markup=teclado_canal
-        )
+        # Verifica se já existe um chamado aberto para este usuário no canal
+        if user.id in CHAMADOS_ATIVOS:
+            msg_id_canal = CHAMADOS_ATIVOS[user.id]
+            try:
+                # Apenas atualiza a mensagem existente no canal (sem criar outra)
+                await context.bot.edit_message_text(
+                    chat_id=CANAL_SUPORTE_ID,
+                    message_id=msg_id_canal,
+                    text=texto_chamado,
+                    parse_mode="HTML",
+                    reply_markup=teclado_canal
+                )
+            except Exception:
+                # Se por algum motivo a mensagem foi apagada no canal, cria uma nova
+                nova_msg = await context.bot.send_message(
+                    chat_id=CANAL_SUPORTE_ID, text=texto_chamado, parse_mode="HTML", reply_markup=teclado_canal
+                )
+                CHAMADOS_ATIVOS[user.id] = nova_msg.message_id
+        else:
+            # Cria o primeiro chamado para este usuário no canal
+            nova_msg = await context.bot.send_message(
+                chat_id=CANAL_SUPORTE_ID, text=texto_chamado, parse_mode="HTML", reply_markup=teclado_canal
+            )
+            CHAMADOS_ATIVOS[user.id] = nova_msg.message_id
         
         teclado_usuario = InlineKeyboardMarkup([
             [InlineKeyboardButton("❌ Encerrar Atendimento", callback_data="usuario_sair")]
@@ -192,14 +214,20 @@ async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT
             reply_markup=teclado_usuario
         )
     except Exception as e:
-        print(f"ERRO AO ENVIAR PARA O CANAL: {e}")
+        print(f"ERRO AO ENVIAR/ATUALIZAR NO CANAL: {e}")
 
     return AGUARDANDO_MENSAGEM
 
 
 async def cancelar_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Encerra o atendimento a pedido do usuário."""
+    user = update.effective_user
     query = update.callback_query
+    
+    # Remove dos chamados ativos se houver
+    if user and user.id in CHAMADOS_ATIVOS:
+        CHAMADOS_ATIVOS.pop(user.id, None)
+
     if query:
         await query.answer()
         await query.edit_message_text("❌ Atendimento encerrado. Se precisar de algo, acesse o menu novamente!")
@@ -209,7 +237,6 @@ async def cancelar_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
-# Funções para gerenciar os botões interativos diretamente no canal do atendente
 async def botao_canal_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -227,32 +254,41 @@ async def botao_canal_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         return AGUARDANDO_RESPOSTA_ADMIN
 
     elif data.startswith("concluir_"):
-        user_id = data.split("_")[1]
+        user_id_str = data.split("_")[1]
+        user_id = int(user_id_str)
+        
         try:
             await context.bot.send_message(
-                chat_id=int(user_id),
+                chat_id=user_id,
                 text="✅ O seu chamado foi concluído pela equipe de suporte. Obrigado por utilizar o AlertaSUS!"
             )
         except Exception as e:
             print(f"Erro ao avisar usuário sobre conclusão: {e}")
 
+        # Remove da lista de ativos
+        if user_id in CHAMADOS_ATIVOS:
+            CHAMADOS_ATIVOS.pop(user_id, None)
+
         await query.edit_message_text(
-            text=query.message.text + "\n\n<b>[CHAMADO CONCLUÍDO]</b>",
-            parse_mode="HTML"
+            text=query.message.text + "\n\n<b>[✅ CHAMADO CONCLUÍDO]</b>",
+            parse_mode="HTML",
+            reply_markup=None
         )
 
 
 async def enviar_resposta_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = context.user_data.get("atendendo_user_id")
+    user_id_str = context.user_data.get("atendendo_user_id")
     resposta = update.message.text
 
-    if not user_id:
+    if not user_id_str:
         await update.message.reply_text("⚠️ Nenhum usuário selecionado para resposta.")
         return ConversationHandler.END
 
+    user_id = int(user_id_str)
+
     try:
         await context.bot.send_message(
-            chat_id=int(user_id),
+            chat_id=user_id,
             text=f"💬 <b>Suporte AlertaSUS:</b>\n\n{resposta}",
             parse_mode="HTML"
         )
