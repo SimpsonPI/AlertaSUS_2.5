@@ -17,11 +17,11 @@ logger = logging.getLogger(__name__)
 AGUARDANDO_MENSAGEM = 1
 AGUARDANDO_RESPOSTA_ADMIN = 2
 
-# Dicionários para gerenciar os chamados e o histórico de mensagens:
+# Dicionários de controle:
 # CHAMADOS_ATIVOS = {user_id: message_id_no_canal}
 CHAMADOS_ATIVOS = {}
-# HISTORICO_MENSAGENS = {user_id: [lista_de_mensagens]}
-HISTORICO_MENSAGENS = {}
+# HISTORICO_CONVERSA = {user_id: "Histórico formatado em texto"}
+HISTORICO_CONVERSA = {}
 
 
 async def menu_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -168,14 +168,12 @@ async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT
     texto_usuario = update.message.text
     CANAL_SUPORTE_ID = -1004479965268
 
-    # Inicializa ou adiciona ao histórico do usuário
-    if user.id not in HISTORICO_MENSAGENS:
-        HISTORICO_MENSAGENS[user.id] = []
-    
-    HISTORICO_MENSAGENS[user.id].append(texto_usuario)
+    # Inicializa o histórico se não existir
+    if user.id not in HISTORICO_CONVERSA:
+        HISTORICO_CONVERSA[user.id] = ""
 
-    # Monta o histórico acumulado (exibe todas as mensagens enviadas)
-    historico_texto = "\n".join([f"• <i>{msg}</i>" for msg in HISTORICO_MENSAGENS[user.id]])
+    # Adiciona a mensagem da usuária ao histórico unificado
+    HISTORICO_CONVERSA[user.id] += f"\n👤 <b>Usuário:</b> {texto_usuario}"
 
     teclado_canal = InlineKeyboardMarkup([
         [
@@ -188,14 +186,14 @@ async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT
         f"🚨 <b>CHAMADO DE SUPORTE ATIVO</b>\n\n"
         f"• <b>Usuário:</b> {user.full_name} (@{user.username or 'Sem username'})\n"
         f"• <b>ID do Telegram:</b> <code>{user.id}</code>\n\n"
-        f"• <b>Mensagens do Usuário:</b>\n{historico_texto}"
+        f"<b>💬 Histórico da Conversa:</b>"
+        f"{HISTORICO_CONVERSA[user.id]}"
     )
 
     try:
         if user.id in CHAMADOS_ATIVOS:
             msg_id_canal = CHAMADOS_ATIVOS[user.id]
             try:
-                # Atualiza a mensagem existente no canal somando o histórico
                 await context.bot.edit_message_text(
                     chat_id=CANAL_SUPORTE_ID,
                     message_id=msg_id_canal,
@@ -229,13 +227,12 @@ async def receber_mensagem_suporte(update: Update, context: ContextTypes.DEFAULT
 
 
 async def cancelar_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Encerra o atendimento a pedido do usuário."""
     user = update.effective_user
     query = update.callback_query
     
     if user:
         CHAMADOS_ATIVOS.pop(user.id, None)
-        HISTORICO_MENSAGENS.pop(user.id, None)
+        HISTORICO_CONVERSA.pop(user.id, None)
 
     if query:
         await query.answer()
@@ -253,14 +250,14 @@ async def botao_canal_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 
     if data.startswith("resp_"):
         user_id = data.split("_")[1]
-        context.user_data["atendendo_user_id"] = user_id
+        context.chat_data["atendendo_user_id"] = user_id
         
         await query.message.reply_text(
             f"✍️ <b>Modo de Resposta Ativado</b> para o ID: <code>{user_id}</code>\n\n"
             "Digite a mensagem que deseja enviar para este usuário agora:",
             parse_mode="HTML"
         )
-        return AGUARDANDO_RESPOSTA_ADMIN
+        return
 
     elif data.startswith("concluir_"):
         user_id_str = data.split("_")[1]
@@ -274,9 +271,8 @@ async def botao_canal_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         except Exception as e:
             print(f"Erro ao avisar usuário sobre conclusão: {e}")
 
-        # Limpa dos registros ativos e histórico
         CHAMADOS_ATIVOS.pop(user_id, None)
-        HISTORICO_MENSAGENS.pop(user_id, None)
+        HISTORICO_CONVERSA.pop(user_id, None)
 
         await query.edit_message_text(
             text=query.message.text + "\n\n<b>[✅ CHAMADO CONCLUÍDO]</b>",
@@ -286,30 +282,60 @@ async def botao_canal_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 
 
 async def enviar_resposta_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id_str = context.user_data.get("atendendo_user_id")
+    user_id_str = context.chat_data.get("atendendo_user_id")
     resposta = update.message.text
+    CANAL_SUPORTE_ID = -1004479965268
 
     if not user_id_str:
-        await update.message.reply_text("⚠️ Nenhum usuário selecionado para resposta.")
-        return ConversationHandler.END
+        return  # Ignora se o admin mandou texto no canal sem clicar em responder
 
     user_id = int(user_id_str)
 
     try:
+        # Envia a resposta do suporte diretamente para a janela da usuária
         await context.bot.send_message(
             chat_id=user_id,
             text=f"💬 <b>Suporte AlertaSUS:</b>\n\n{resposta}",
             parse_mode="HTML"
         )
+
+        # Atualiza o histórico unificado da conversa com a resposta do atendente
+        if user_id not in HISTORICO_CONVERSA:
+            HISTORICO_CONVERSA[user_id] = ""
+        
+        HISTORICO_CONVERSA[user_id] += f"\n🤖 <b>Suporte:</b> {resposta}"
+
+        # Atualiza o card no canal com o histórico completo (usuário + suporte)
+        if user_id in CHAMADOS_ATIVOS:
+            msg_id_canal = CHAMADOS_ATIVOS[user_id]
+            teclado_canal = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("✍️ Responder Usuário", callback_data=f"resp_{user_id}"),
+                    InlineKeyboardButton("✅ Concluir Chamado", callback_data=f"concluir_{user_id}")
+                ]
+            ])
+            texto_atualizado = (
+                f"🚨 <b>CHAMADO DE SUPORTE ATIVO</b>\n\n"
+                f"• <b>ID do Telegram:</b> <code>{user_id}</code>\n\n"
+                f"<b>💬 Histórico da Conversa:</b>"
+                f"{HISTORICO_CONVERSA[user_id]}"
+            )
+            await context.bot.edit_message_text(
+                chat_id=CANAL_SUPORTE_ID,
+                message_id=msg_id_canal,
+                text=texto_atualizado,
+                parse_mode="HTML",
+                reply_markup=teclado_canal
+            )
+
         await update.message.reply_text("✅ Resposta enviada com sucesso para o usuário!")
     except Exception as e:
         await update.message.reply_text(f"❌ Erro ao enviar resposta: {e}")
 
-    context.user_data.pop("atendendo_user_id", None)
-    return ConversationHandler.END
+    context.chat_data.pop("atendendo_user_id", None)
 
 
-# Declaração do ConversationHandler
+# Declaração do ConversationHandler do Bot de Usuário
 conv_suporte = ConversationHandler(
     entry_points=[MessageHandler(filters.TEXT & ~filters.COMMAND, iniciar_atendimento)],
     states={
@@ -329,26 +355,3 @@ conv_suporte = ConversationHandler(
     },
     fallbacks=[]
 )
-
-
-# Funções de autoatendimento para os comandos do bot
-async def comando_cadastrar_nova(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("📌 Novo Cadastro de Regulação", parse_mode="HTML")
-
-async def comando_verificar_todos(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔍 Consultar Regulações Ativas", parse_mode="HTML")
-
-async def comando_verificar_especifico(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔍 Consulta Específica", parse_mode="HTML")
-
-async def comando_corrigir(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("✏️ Correção de Cadastro", parse_mode="HTML")
-
-async def comando_excluir(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🗑️ Exclusão de Regulação", parse_mode="HTML")
-
-async def comando_planos(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("💳 Planos e Assinaturas", parse_mode="HTML")
-
-async def comando_privacidade(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔒 Política de Privacidade", parse_mode="HTML")
