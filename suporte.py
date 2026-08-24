@@ -581,48 +581,52 @@ async def comando_privacidade(update, context):
 
 
 async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Processa TODAS as mensagens de texto (usuário E admin)"""
+    """Processa TODAS as mensagens de texto (usuário E admin) de forma unificada"""
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
     texto = update.message.text
     
-    # CASO 1: Mensagem do CANAL (admin respondendo)
+    # CASO 1: Mensagem enviada no CANAL DE SUPORTE (Admin respondendo)
     if chat_id == CANAL_SUPORTE_ID:
         admin_id = user_id
         user_id_destino = MODO_RESPOSTA_ADMIN.get(admin_id)
         
         if not user_id_destino:
-            await update.message.reply_text("❌ Clique em 'Responder Usuário' primeiro.")
+            await update.message.reply_text("❌ Clique em '✍️ Responder Usuário' no painel do chamado antes de digitar.")
             return
         
         if user_id_destino not in HISTORICO_CONVERSA:
-            await update.message.reply_text("❌ Chamado já encerrado.")
+            await update.message.reply_text("❌ O chamado deste usuário já foi encerrado.")
             MODO_RESPOSTA_ADMIN.pop(admin_id, None)
             return
         
         try:
+            # Envia a resposta diretamente para o chat privado do usuário
             await context.bot.send_message(
                 chat_id=user_id_destino,
                 text=f"💬 <b>Suporte:</b> {texto}",
                 parse_mode="HTML"
             )
             
+            # Atualiza o histórico de conversas de forma assíncrona e segura
             async with LOCK_DADOS:
                 atualizar_historico(user_id_destino, 'suporte', texto)
                 await atualizar_interface_usuario(context, user_id_destino)
                 await atualizar_canal_suporte(context, user_id_destino)
             
-            await update.message.reply_text(f"✅ Resposta enviada para {user_id_destino}!")
+            await update.message.reply_text(f"✅ Resposta enviada com sucesso para o usuário <code>{user_id_destino}</code>!", parse_mode="HTML")
             
         except Exception as e:
-            await update.message.reply_text(f"❌ Erro: {e}")
+            logger.error(f"Erro ao enviar resposta do admin para {user_id_destino}: {e}")
+            await update.message.reply_text(f"❌ Erro ao enviar a mensagem: {e}")
         
         return
     
-    # CASO 2: Mensagem do USUÁRIO (chat privado)
+    # CASO 2: Mensagem enviada pelo USUÁRIO (Chat privado)
     if user_id not in HISTORICO_CONVERSA:
         await update.message.reply_text(
-            "❌ Você não tem um atendimento ativo.\n\nUse /start para iniciar."
+            "❌ Você não tem um atendimento ativo.\n\n"
+            "Use /start para iniciar um novo atendimento."
         )
         return
     
