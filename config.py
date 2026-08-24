@@ -1,17 +1,16 @@
 import os
-from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
-from supabase import create_client, Client
 
-# Carrega o arquivo .env explicitamente
-load_dotenv(override=True)
+# Carrega o .env se existir localmente (no seu PC), mas ignora se não achar (no Railway)
+load_dotenv()
 
-# ==================== CONFIGURAÇÕES PRINCIPAIS ====================
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "5242040324"))
+# Validação segura que não quebra o deploy se as variáveis já estiverem no painel do Railway
+if not TELEGRAM_BOT_TOKEN or not SUPABASE_URL or not SUPABASE_KEY:
+    print("⚠️ ATENÇÃO: Alguma variável de ambiente principal está faltando!")
 
 # ==================== IDs DE ADMINISTRAÇÃO ====================
 
