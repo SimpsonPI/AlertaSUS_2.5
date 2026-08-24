@@ -32,8 +32,12 @@ URL_FORMULARIO_PAGES = "https://simpsonpi.github.io/alerta-sus-bot/"
 
 # ==================== VALIDAÇÃO DAS VARIÁVEIS OBRIGATÓRIAS ====================
 
-if not TELEGRAM_BOT_TOKEN or not SUPABASE_URL or not SUPABASE_KEY:
-    raise ValueError("⚠️ ERRO CRÍTICO: Variáveis TELEGRAM_BOT_TOKEN, SUPABASE_URL ou SUPABASE_KEY não configuradas no arquivo .env!")
+# No final do seu config.py, mude a verificação para ignorar se faltar o token principal caso seja o suporte:
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError("⚠️ ERRO CRÍTICO: Variáveis SUPABASE_URL ou SUPABASE_KEY não configuradas no arquivo .env!")
+
+# O token do Telegram passa a ser opcional aqui para evitar travar o serviço de suporte
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 # ==================== CLIENTE SUPABASE ====================
 
