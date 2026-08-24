@@ -601,14 +601,14 @@ async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
             return
         
         try:
-            # Envia a resposta diretamente para o chat privado do usuário
+            # Envia a resposta diretamente para o chat privado do usuário usando o bot de atendimento
             await context.bot.send_message(
                 chat_id=user_id_destino,
                 text=f"💬 <b>Suporte:</b> {texto}",
                 parse_mode="HTML"
             )
             
-            # Atualiza o histórico de conversas de forma assíncrona e segura
+            # Atualiza o histórico registrando corretamente como 'suporte'
             async with LOCK_DADOS:
                 atualizar_historico(user_id_destino, 'suporte', texto)
                 await atualizar_interface_usuario(context, user_id_destino)
