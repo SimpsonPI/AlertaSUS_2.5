@@ -10,6 +10,11 @@ from admin import (
     comando_menu_admin,
 )
 import logging
+from bot_suporte import (
+    handlers as suporte_handlers,
+    menu_suporte,
+    exibir_resposta_faq,
+)
 from telegram import BotCommand, BotCommandScopeAllPrivateChats
 from telegram.error import NetworkError, TimedOut
 from telegram.ext import (
@@ -45,10 +50,6 @@ from handler_admin import (
     comando_remover_cortesia,
 )
 from handler_pagamento import gerar_pagamento_pix
-from suporte import (
-    menu_suporte,
-    exibir_resposta_faq,
-)
 
 # Configuração de Logs
 logging.basicConfig(
