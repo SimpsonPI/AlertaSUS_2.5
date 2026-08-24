@@ -3,7 +3,7 @@ import logging
 from dotenv import load_dotenv
 from telegram.ext import ApplicationBuilder
 from suporte import handlers as suporte_handlers
-from config import TELEGRAM_TOKEN_SUPORTE # ou a variável de token de suporte correspondente
+from config import TELEGRAM_BOT_TOKEN # ou a variável de token de suporte correspondente
 
 load_dotenv()
 
@@ -13,7 +13,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def main():
-    token = os.getenv("TELEGRAM_TOKEN_SUPORTE") or os.getenv("TELEGRAM_BOT_TOKEN")
+    token = os.getenv("TELEGRAM_BOT_TOKEN") or os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
         logger.error("Token do bot de suporte não encontrado!")
         return

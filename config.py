@@ -50,7 +50,7 @@ MAIN_LOOP = None
 # ==================== CONFIGURAÇÕES DO BOT DE SUPORTE ====================
 
 # Token do bot de suporte (deve estar no arquivo .env)
-TELEGRAM_TOKEN_SUPORTE = os.getenv("TELEGRAM_TOKEN_SUPORTE", "")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
 # ID do canal de suporte no Telegram
 CANAL_SUPORTE_ID = -1004479965268
@@ -143,8 +143,8 @@ def get_supabase_client() -> Client:
 # ==================== VALIDAÇÃO ADICIONAL ====================
 
 # Verifica se o token do bot de suporte está configurado
-if not TELEGRAM_TOKEN_SUPORTE:
-    print("⚠️ AVISO: TELEGRAM_TOKEN_SUPORTE não configurado. O bot de suporte pode não funcionar.")
+if not TELEGRAM_BOT_TOKEN:
+    print("⚠️ AVISO: TELEGRAM_BOT_TOKEN não configurado. O bot de suporte pode não funcionar.")
 
 # Verifica se o ID do canal é válido
 if CANAL_SUPORTE_ID >= 0:
@@ -178,7 +178,7 @@ __all__ = [
     'MAIN_LOOP',
     
     # Configurações do bot de suporte
-    'TELEGRAM_TOKEN_SUPORTE',
+    'TELEGRAM_BOT_TOKEN',
     'CANAL_SUPORTE_ID',
     
     # Estados do ConversationHandler
