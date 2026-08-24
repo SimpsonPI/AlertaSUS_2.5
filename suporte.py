@@ -524,6 +524,37 @@ async def cancelar_resposta_admin(update: Update, context: ContextTypes.DEFAULT_
     MODO_RESPOSTA_ADMIN.pop(admin_id, None)
     await update.message.reply_text("❌ Modo de resposta cancelado.")
 
+async def enviar_resposta_para_usuario(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Captura a mensagem enviada pelo administrador no canal de suporte 
+    e a encaminha para o chat privado do usuário que abriu o chamado.
+    """
+    # Verifica se o admin está em estado de resposta e qual é o ID do usuário alvo
+    user_id_alvo = context.user_data.get("admin_respondendo_para")
+    
+    if not user_id_alvo:
+        # Se não houver usuário selecionado, ignora ou avisa
+        return
+
+    mensagem_admin = update.message.text
+
+    try:
+        # Envia a mensagem de fato para o chat privado do usuário
+        await context.bot.send_message(
+            chat_id=user_id_alvo,
+            text=f"🎧 **Suporte:**\n\n{mensagem_admin}",
+            parse_mode="Markdown"
+        )
+        
+        # Confirma ao admin no canal que foi enviado
+        await update.message.reply_text("✅ Mensagem enviada para o usuário com sucesso!")
+        
+        # Opcional: limpar o estado ou manter para continuar conversando
+        # context.user_data.pop("admin_respondendo_para", None)
+        
+    except Exception as e:
+        await update.message.reply_text(f"❌ Erro ao enviar mensagem para o usuário: {e}")
+
 
 # ==================== COMANDOS AUXILIARES ====================
 
