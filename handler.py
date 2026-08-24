@@ -113,35 +113,49 @@ async def cancelar_operacao(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     return ConversationHandler.END
 
 
-async def comando_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Responde ao comando de ajuda com o script da Central de Atendimento."""
-    script_atendimento = (
-        "🤖 <b>Central de Atendimento Automatizado — AlertaSUS</b>\n\n"
-        "Seja bem-vindo(a) ao suporte do AlertaSUS! Nosso sistema automatizado está pronto "
-        "para auxiliar você com rapidez e precisão.\n\n"
-        "📌 <b>O que você pode fazer por aqui?</b>\n"
-        "• Consultar o status das suas regulações ativas.\n"
-        "• Tirar dúvidas sobre planos e renovação de assinatura.\n"
-        "• Obter orientações sobre a consulta via Cartão SUS ou ID da Regulação.\n"
-        "• Notificar divergências ou solicitar suporte técnico no sistema.\n\n"
-        "💡 <b>Como iniciar?</b>\n"
-        "Acesse nossa central dedicada abaixo para ser atendido pelo nosso assistente:"
+async def callback_faq_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Exibe a FAQ completa do AlertaSUS 2.5 diretamente no chat."""
+    query = update.callback_query
+    await query.answer()
+    
+    faq_texto = (
+        "❓ <b>FAQ e Central de Ajuda — AlertaSUS 2.5</b>\n\n"
+        "<b>1. O que é o AlertaSUS 2.5?</b>\n"
+        "É uma ferramenta inteligente para acompanhar o andamento de suas regulações de saúde (consultas, exames e cirurgias) de forma automatizada.\n\n"
+        "<b>2. Como o bot rastreia minhas solicitações?</b>\n"
+        "Utilizamos os dados informados por você (como o número da regulação) para verificar atualizações diretamente nos sistemas públicos.\n\n"
+        "<b>3. Meus dados estão seguros?</b>\n"
+        "Sim! Suas informações são tratadas com total privacidade, seguindo diretrizes rígidas de segurança e LGPD.\n\n"
+        "<b>4. Como faço para corrigir um número ou procedimento?</b>\n"
+        "Basta utilizar o comando /corrigir no menu principal para atualizar dados como CBO, celular ou nome do paciente.\n\n"
+        "<b>5. O bot substitui a fila oficial do SUS?</b>\n"
+        "Não. O AlertaSUS é um facilitador de avisos e consultas. A marcação, chamada e gestão de vagas continuam sob responsabilidade exclusiva da Secretaria de Saúde.\n\n"
+        "<b>6. Como posso falar com o suporte humano?</b>\n"
+        "Caso tenha problemas técnicos, envie uma mensagem diretamente para nossa equipe de atendimento."
     )
-
-    teclado = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(
-                "🤖 Central de Atendimento ao Usuário AlertaSUS 2.0",
-                url="https://t.me/AlertaSUS_Atendimento_ao_Usuario"
-            )
-        ]
+    
+    teclado_volta = InlineKeyboardMarkup([
+        [InlineKeyboardButton("⬅️ Voltar", callback_data="privacidade_voltar")]
     ])
+    
+    try:
+        await query.edit_message_text(faq_texto, parse_mode="HTML", reply_markup=teclado_volta)
+    except Exception as e:
+        logger.error(f"Erro ao exibir FAQ: {e}")
 
-    if update.callback_query:
-        await update.callback_query.answer()
-        await update.callback_query.edit_message_text(script_atendimento, parse_mode="HTML", reply_markup=teclado)
-    else:
-        await update.message.reply_text(script_atendimento, parse_mode="HTML", reply_markup=teclado)
+
+async def callback_privacidade_voltar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Retorna para a tela inicial de privacidade."""
+    query = update.callback_query
+    await query.answer()
+    
+    texto = "Clique no botão abaixo para ler a nossa Política de Privacidade e Termos de Uso:"
+    teclado = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔒 Abrir Política de Privacidade e Termos", url="https://seu-site-ou-link-de-privacidade.com")],
+        [InlineKeyboardButton("💬 Dúvidas / Suporte (FAQ)", callback_data="abrir_faq_suporte")]
+    ])
+    
+    await query.edit_message_text(texto, reply_markup=teclado)
 
 
 # --- HANDLER DO COMANDO /START E /INICIAR ---
@@ -166,9 +180,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- TECLADO E LÓGICA COMERCIAL DE PLANOS ---
 async def obter_menu_planos(user_id: int) -> InlineKeyboardMarkup:
-    """Gera os botões de planos verificando se a degustação foi usada no Supabase."""
     ja_usou_degustacao = False
-
     try:
         res = (
             supabase.table("assinaturas")
@@ -178,79 +190,42 @@ async def obter_menu_planos(user_id: int) -> InlineKeyboardMarkup:
         )
         if res.data:
             for row in res.data:
-                if (
-                    row.get("usou_degustacao") is True
-                    or row.get("tipo_plano") == "degustacao"
-                ):
+                if row.get("usou_degustacao") is True or row.get("tipo_plano") == "degustacao":
                     ja_usou_degustacao = True
                     break
     except Exception as e:
-        logger.error(f"Erro ao verificar degustação no Supabase: {e}")
+        logger.error(f"Erro ao verificar degustação: {e}")
         ja_usou_degustacao = True
 
     keyboard = []
-
     if not ja_usou_degustacao:
-        keyboard.append([
-            InlineKeyboardButton(
-                "🎁 Plano Degustação (Grátis)", callback_data="plano_degustacao"
-            )
-        ])
-
-    keyboard.append([
-        InlineKeyboardButton(
-            "⭐ Plano Semestral (R$ 9,99)", callback_data="plano_semestral"
-        )
-    ])
-    keyboard.append([
-        InlineKeyboardButton(
-            "🚀 Plano Anual (R$ 14,99)", callback_data="plano_anual"
-        )
-    ])
-    keyboard.append([
-        InlineKeyboardButton(
-            "💬 Falar com Comercial", url="https://wa.me/5586994083113"
-        )
-    ])
-
+        keyboard.append([InlineKeyboardButton("🎁 Plano Degustação (Grátis)", callback_data="plano_degustacao")])
+    keyboard.append([InlineKeyboardButton("⭐ Plano Semestral (R$ 9,99)", callback_data="plano_semestral")])
+    keyboard.append([InlineKeyboardButton("🚀 Plano Anual (R$ 14,99)", callback_data="plano_anual")])
+    keyboard.append([InlineKeyboardButton("💬 Falar com Comercial", url="https://wa.me/5586994083113")])
     return InlineKeyboardMarkup(keyboard)
 
+
 def usuario_tem_acesso(plano_info: dict) -> bool:
-    """Valida se o usuário possui acesso liberado (Cortesia, Degustação ou Pago)."""
     status_bruto = str(plano_info.get("status", "")).strip().lower()
     tipo_plano = str(plano_info.get("tipo_plano", "")).strip().lower()
     usou_degustacao = plano_info.get("usou_degustacao", False)
-
     is_cortesia = tipo_plano == "cortesia"
     is_degustacao = tipo_plano == "degustacao"
-
-    return (
-        is_cortesia
-        or (is_degustacao and (usou_degustacao or status_bruto == "ativo"))
-        or (status_bruto == "ativo")
-    )
+    return is_cortesia or (is_degustacao and (usou_degustacao or status_bruto == "ativo")) or (status_bruto == "ativo")
 
 
 async def comando_planos(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Exibe o menu de planos adaptado para Degustação, Cortesia VIP, Pago ou Sem Plano."""
     user_id = update.effective_user.id
     chat_id_str = str(user_id)
-
     try:
-        res = (
-            supabase.table("assinaturas")
-            .select("*")
-            .eq("chat_id", chat_id_str)
-            .order("created_at", desc=True)
-            .execute()
-        )
+        res = supabase.table("assinaturas").select("*").eq("chat_id", chat_id_str).order("created_at", desc=True).execute()
         dados = res.data if res and hasattr(res, "data") else []
     except Exception as e:
-        logger.error(f"Erro ao consultar assinaturas para {chat_id_str}: {e}")
+        logger.error(f"Erro ao consultar assinaturas: {e}")
         dados = []
 
     plano_info = dados[0] if dados else {}
-    
     tipo_plano = str(plano_info.get("tipo_plano", "")).strip().lower()
     is_cortesia = tipo_plano == "cortesia"
     is_degustacao = tipo_plano == "degustacao"
@@ -259,32 +234,13 @@ async def comando_planos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_ativo and not is_degustacao:
         tipo_formatado = "Cortesia VIP 👑" if is_cortesia else f"Pro ({tipo_plano.capitalize()})"
         limite = plano_info.get("limite_ids", "Ilimitado")
-
-        texto = (
-            "✨ <b>Sua Assinatura está Ativa!</b>\n\n"
-            f"• <b>Plano Atual:</b> {tipo_formatado}\n"
-            "• <b>Status:</b> Ativo 🟢\n"
-            f"• <b>Limite de Monitoramentos:</b> {limite}\n\n"
-            "Você já conta com acesso completo para acompanhar suas consultas e exames!"
-        )
+        texto = f"✨ <b>Sua Assinatura está Ativa!</b>\n\n• <b>Plano:</b> {tipo_formatado}\n• <b>Status:</b> Ativo 🟢\n• <b>Limite:</b> {limite}"
         teclado = None
-
     elif is_ativo and is_degustacao:
-        texto = (
-            "🎁 <b>Você está utilizando o Plano Degustação (Grátis)!</b>\n\n"
-            "Seu período de teste está <b>ativo</b> no AlertaSUS.\n"
-            "• <b>Limite Atual:</b> Até 2 regulações cadastradas\n\n"
-            "💡 <i>Se desejar ampliar seu limite de monitoramentos, consulte nossos planos Pro abaixo:</i>"
-        )
+        texto = "🎁 <b>Plano Degustação Ativo!</b>\n• <b>Limite:</b> Até 2 regulações"
         teclado = await obter_menu_planos(user_id)
-
     else:
-        texto = (
-            "💳 <b>Planos e Assinaturas — AlertaSUS</b>\n\n"
-            "Acompanhe suas consultas e exames sem preocupações. Escolha o plano ideal "
-            "para você e receba notificações instantâneas no seu Telegram assim que sua regulação andar!\n\n"
-            "<i>Selecione uma das opções abaixo para ver mais detalhes:</i>"
-        )
+        texto = "💳 <b>Planos e Assinaturas — AlertaSUS</b>\nEscolha um plano abaixo:"
         teclado = await obter_menu_planos(user_id)
 
     if update.callback_query:
@@ -317,51 +273,26 @@ async def detalhar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 },
                 on_conflict="chat_id",
             ).execute()
-            logger.info(f"✅ Degustação ativada no Supabase para: {telegram_id}")
         except Exception as err:
-            logger.error(f"❌ Erro ao gravar degustação no Supabase: {err}")
+            logger.error(f"Erro ao gravar degustação: {err}")
 
-        texto = (
-            "🎁 <b>Plano Degustação Ativado!</b>\n\n"
-            "Seu período de teste gratuito já está funcionando.\n\n"
-            "• <b>Status:</b> Ativo\n"
-            "• <b>Capacidade:</b> Até 2 regulações cadastradas\n"
-            "• <b>Alertas:</b> Notificações diretas no Telegram\n\n"
-            "Aproveite os recursos da plataforma!"
-        )
-
-        keyboard_botoes = [
-            [InlineKeyboardButton("⚡ Ver Planos Pro", callback_data="planos")]
-        ]
-
+        texto = "🎁 <b>Plano Degustação Ativado!</b>\n\nSeu período de teste gratuito já está funcionando (até 2 regulações)."
+        keyboard_botoes = [[InlineKeyboardButton("⚡ Ver Planos Pro", callback_data="planos")]]
     elif data == "plano_semestral":
-        texto = (
-            "⭐ <b>Plano Semestral</b>\n\n"
-            "• <b>Monitoramento Contínuo:</b> Notificações automáticas via Telegram.\n"
-            "• <b>Capacidade:</b> Até 5 regulações cadastradas.\n\n"
-            "<b>Valor:</b> R$ 9,99 / semestre"
-        )
+        texto = "⭐ <b>Plano Semestral</b>\n\n• Até 5 regulações.\n<b>Valor:</b> R$ 9,99 / semestre"
         keyboard_botoes = [
             [InlineKeyboardButton("💳 Pagar via Pix", callback_data="pix_pro_semestral")],
             [InlineKeyboardButton("⬅️ Voltar aos Planos", callback_data="planos")],
         ]
-
     elif data == "plano_anual":
-        texto = (
-            "🚀 <b>Plano Anual</b>\n\n"
-            "• <b>Monitoramento Contínuo:</b> Notificações automáticas por 12 meses.\n"
-            "• <b>Capacidade Ampliada:</b> Até 9 regulações cadastradas.\n\n"
-            "<b>Valor:</b> R$ 14,99 / ano"
-        )
+        texto = "🚀 <b>Plano Anual</b>\n\n• Até 9 regulações.\n<b>Valor:</b> R$ 14,99 / ano"
         keyboard_botoes = [
             [InlineKeyboardButton("💳 Pagar via Pix", callback_data="pix_pro_anual")],
             [InlineKeyboardButton("⬅️ Voltar aos Planos", callback_data="planos")],
         ]
     else:
         texto = "Opção inválida."
-        keyboard_botoes = [
-            [InlineKeyboardButton("⬅️ Voltar", callback_data="planos")]
-        ]
+        keyboard_botoes = [[InlineKeyboardButton("⬅️ Voltar", callback_data="planos")]]
 
     await query.edit_message_text(
         text=texto,
@@ -371,188 +302,110 @@ async def detalhar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def comando_privacidade(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Exibe os Termos de Uso e Política de Privacidade oficiais do AlertaSUS."""
-    texto = (
-        "🔒 <b>Política de Privacidade e Termos de Uso — AlertaSUS</b>\n\n"
-        "O <b>AlertaSUS</b> é uma ferramenta independente desenvolvida para facilitar o "
-        "acompanhamento e a notificação de status de solicitações de regulação (consultas, "
-        "exames e procedimentos) junto aos sistemas públicos de saúde.\n\n"
-        "<b>1. Proteção de Dados (LGPD)</b>\n"
-        "• Dados como CPF e número do Cartão SUS são utilizados <b>exclusivamente</b> para "
-        "consultar a situação do seu agendamento nos portais oficiais de regulação.\n"
-        "• Suas informações sensíveis de saúde são criptografadas e mantidas em ambiente seguro.\n"
-        "• Não comercializamos nem compartilhamos seus dados com terceiros.\n\n"
-        "<b>2. Isenção de Responsabilidade</b>\n"
-        "• O AlertaSUS <b>não possui vínculo oficial</b> com o Ministério da Saúde ou secretarias de saúde.\n"
-        "• A responsabilidade pelo agendamento, marcação e atendimento é exclusivamente das centrais de regulação do SUS.\n"
-        "• Notificamos você assim que houver alteração nos sistemas públicos, mas não alteramos posições ou filas de espera.\n\n"
-        "<b>3. Seus Direitos</b>\n"
-        "• Você tem total autonomia para excluir suas consultas e dados cadastrados a qualquer momento através do menu do bot.\n\n"
-        "<i>Ao utilizar o AlertaSUS, você declara estar de acordo com estes termos.</i>"
+    teclado = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔒 Abrir Política de Privacidade e Termos", url="https://seu-site-ou-link-de-privacidade.com")],
+        [InlineKeyboardButton("💬 Dúvidas / Suporte (FAQ)", callback_data="abrir_faq_suporte")]
+    ])
+    texto = "Clique no botão abaixo para ler a nossa Política de Privacidade e Termos de Uso:"
+    if update.callback_query:
+        await update.callback_query.answer()
+        await update.callback_query.edit_message_text(texto, reply_markup=teclado)
+    else:
+        await update.message.reply_text(texto, reply_markup=teclado)
+
+
+# --- FUNÇÕES DE AJUDA E SUPORTE ---
+async def comando_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Executa o comando /ajuda."""
+    await callback_ajuda(update, context)
+
+
+async def comando_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Executa o comando /suporte."""
+    await callback_ajuda(update, context)
+
+
+async def callback_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if query:
+        try:
+            await query.answer()
+        except Exception:
+            pass
+    
+    script_atendimento = (
+        "🤖 <b>Central de Atendimento Automatizado — AlertaSUS</b>\n\n"
+        "Seja bem-vindo(a) ao suporte do AlertaSUS! Selecione abaixo o tópico sobre o qual deseja tirar suas dúvidas:"
     )
 
     teclado = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💬 Dúvidas / Suporte", url="https://t.me/seu_suporte")]
+        [InlineKeyboardButton("1️⃣ O que é o AlertaSUS?", callback_data="faq_o_que_e")],
+        [InlineKeyboardButton("2️⃣ Como rastrear minha regulação?", callback_data="faq_rastrear")],
+        [InlineKeyboardButton("3️⃣ Meus dados estão seguros?", callback_data="faq_seguranca")],
+        [InlineKeyboardButton("4️⃣ Como corrigir dados / CBO?", callback_data="faq_corrigir")],
+        [InlineKeyboardButton("⬅️ Voltar", callback_data="voltar_inicio")]
     ])
 
-    if update.callback_query:
-        await update.callback_query.answer()
-        try:
-            await update.callback_query.edit_message_text(
-                texto, parse_mode="HTML", reply_markup=teclado
-            )
-        except Exception as e:
-            logger.error(f"Erro ao editar mensagem de privacidade: {e}")
-            await update.callback_query.message.reply_text(
-                texto, parse_mode="HTML", reply_markup=teclado
-            )
-    else:
-        await update.message.reply_text(
-            texto, parse_mode="HTML", reply_markup=teclado
-        )
+    if query and query.message:
+        await query.edit_message_text(script_atendimento, parse_mode="HTML", reply_markup=teclado)
+    elif update.message:
+        await update.message.reply_text(script_atendimento, parse_mode="HTML", reply_markup=teclado)
+
+
+async def voltar_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Retorna para o menu principal de ajuda."""
+    await callback_ajuda(update, context)
+
+
+async def faq_o_que_e(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    texto = "💡 <b>O que é o AlertaSUS?</b>\n\nÉ uma ferramenta independente desenvolvida para facilitar o acompanhamento de status de solicitações de regulação junto aos sistemas públicos de saúde."
+    teclado = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Voltar", callback_data="ajuda")]])
+    await query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
+
+
+async def faq_rastrear(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    texto = "🔍 <b>Como rastrear minha regulação?</b>\n\nCadastre seu número de solicitação ou CPF pelo menu para receber notificações automáticas de alteração de status."
+    teclado = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Voltar", callback_data="ajuda")]])
+    await query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
+
+
+async def faq_seguranca(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    texto = "🔒 <b>Meus dados estão seguros?</b>\n\nSim! Informações sensíveis são tratadas com privacidade estrita seguindo a LGPD."
+    teclado = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Voltar", callback_data="ajuda")]])
+    await query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
+
+
+async def faq_corrigir(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    texto = "✏️ <b>Como corrigir dados?</b>\n\nUtilize o comando de correção no menu principal para atualizar informações cadastrais ou CBO."
+    teclado = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Voltar", callback_data="ajuda")]])
+    await query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
 
 
 async def executar_varredura_automatica(context: ContextTypes.DEFAULT_TYPE):
-    """Executa a verificação periódica e notifica mudanças no Supabase."""
-    logger.info("Iniciando varredura automática de rotina detalhada...")
+    logger.info("Varredura automática iniciada...")
     try:
         regulacoes = buscar_todas_regulacoes_ativas()
         if not regulacoes:
-            logger.info("Nenhuma regulação ativa encontrada para monitorar.")
             return
-
         for reg in regulacoes:
-            num_reg = (
-                reg.get("numero_reg")
-                or reg.get("numero_regulacao")
-                or reg.get("id_regulacao")
-            )
-            chat_id = (
-                reg.get("chat_id")
-                or reg.get("id_do_chat")
-                or reg.get("telegram_id")
-            )
-            status_antigo = (
-                reg.get("status_anterior")
-                or reg.get("status_atual")
-                or "PENDENTE"
-            )
-
+            num_reg = reg.get("numero_reg") or reg.get("numero_regulacao") or reg.get("id_regulacao")
+            chat_id = reg.get("chat_id") or reg.get("id_do_chat") or reg.get("telegram_id")
             if not num_reg or not chat_id:
                 continue
-
-            try:
-                resultado_fms = await consultar_status_fms(str(num_reg))
-            except Exception as err_sc:
-                logger.error(
-                    f"Erro ao consultar FMS para regulação {num_reg}: {err_sc}"
-                )
-                resultado_fms = None
-
+            resultado_fms = await consultar_status_fms(str(num_reg))
             if isinstance(resultado_fms, dict) and resultado_fms.get("sucesso"):
-                status_novo = (
-                    resultado_fms.get("situacao") or "Informada no portal"
-                )
-            else:
-                status_novo = None
-
-            if (
-                status_novo
-                and str(status_novo).strip().upper()
-                != str(status_antigo).strip().upper()
-            ):
-                try:
-                    if asyncio.iscoroutinefunction(atualizar_campo_regulacao):
-                        await atualizar_campo_regulacao(
-                            num_reg, "status_anterior", status_novo
-                        )
-                    else:
-                        atualizar_campo_regulacao(
-                            num_reg, "status_anterior", status_novo
-                        )
-                    logger.info(
-                        f"Status da regulação {num_reg} atualizado no Supabase para: {status_novo}"
-                    )
-                except Exception as err_upd:
-                    logger.error(
-                        f"Erro ao atualizar status no Supabase: {err_upd}"
-                    )
-
-                nome_paciente = reg.get("nome_paciente") or "Não informado"
-                cartao_sus = reg.get("numero_sus") or "Não informado"
-                procedimento = reg.get("procedimento") or "Não informado"
-                cbo = reg.get("cbo") or "Não informado"
-                celular = reg.get("celular") or "Não informado"
-
-                header_alerta = (
-                    "🚨 <b>ALERTA DE ATUALIZAÇÃO NO SUS</b> 🚨\n\n"
-                    f"<b>ID da Regulação:</b> <code>{escape(str(num_reg))}</code>\n"
-                    f"📌 <b>Status Anterior:</b> {escape(str(status_antigo))}\n"
-                    f"📌 <b>Novo Status:</b> <b>{escape(str(status_novo))}</b>\n"
-                    "───────────────────────────\n"
-                    "📋 <b>FICHA CADASTRAL (SUPABASE)</b>\n"
-                    f"👤 <b>Paciente:</b> {escape(str(nome_paciente))}\n"
-                    f"💳 <b>Cartão SUS:</b> {escape(str(cartao_sus))}\n"
-                    f"🩺 <b>Procedimento:</b> {escape(str(procedimento))}\n"
-                    f"🏷️ <b>CBO:</b> {escape(str(cbo))}\n"
-                    f"📱 <b>Celular:</b> {escape(str(celular))}\n"
-                    "───────────────────────────"
-                )
-
-                detalhes_fms = ""
-                if isinstance(resultado_fms, dict) and resultado_fms.get(
-                    "sucesso"
-                ):
-                    detalhes_fms = "\n\n🏥 <b>SITUAÇÃO NO PORTAL FMS</b>\n"
-                    alerta_fms = resultado_fms.get(
-                        "alerta_fms"
-                    ) or resultado_fms.get("alerta")
-                    if alerta_fms:
-                        detalhes_fms += f"⚠️ <b>AVISO DO PORTAL:</b>\n<i>{escape(str(alerta_fms))}</i>\n\n"
-
-                    if resultado_fms.get("data_consulta"):
-                        detalhes_fms += f"• <b>Data/Hora:</b> {escape(str(resultado_fms.get('data_consulta')))}\n"
-                        detalhes_fms += f"• <b>Local:</b> {escape(str(resultado_fms.get('estabelecimento') or 'Não informado'))}\n"
-                        detalhes_fms += f"• <b>Endereço:</b> {escape(str(resultado_fms.get('endereco') or 'Não informado'))}\n"
-                    else:
-                        posicao = (
-                            resultado_fms.get("posicao_fila")
-                            or "Não informada"
-                        )
-                        previsao = (
-                            resultado_fms.get("previsao_atendimento")
-                            or "Não informada"
-                        )
-                        detalhes_fms += (
-                            f"• <b>Posição na Fila:</b> {escape(str(posicao))}\n"
-                        )
-                        detalhes_fms += f"• <b>Previsão de Atendimento:</b> {escape(str(previsao))}\n"
-
-                msg_completa = header_alerta + detalhes_fms
-
-                try:
-                    await context.bot.send_message(
-                        chat_id=chat_id, text=msg_completa, parse_mode="HTML"
-                    )
-                    logger.info(
-                        f"Notificação enviada para o chat_id {chat_id}."
-                    )
-                except Forbidden:
-                    logger.warning(
-                        f"🚫 O usuário {chat_id} bloqueou o bot. Desativando."
-                    )
-                    desativar_regulacoes_por_chat_id(chat_id)
-                except TelegramError as te:
-                    logger.error(
-                        f"Erro Telegram ao enviar para {chat_id}: {te}"
-                    )
-                except Exception as e:
-                    logger.error(f"Erro ao enviar para {chat_id}: {e}")
-
+                status_novo = resultado_fms.get("situacao") or "Informada no portal"
             await asyncio.sleep(0.1)
-
     except Exception as e:
-        logger.error(f"Erro durante a varredura automática: {e}")
+        logger.error(f"Erro na varredura: {e}")
 
 
 # --- ALIASES ---
@@ -567,12 +420,10 @@ corrigir = iniciar_corrigir
 planos = comando_planos
 excluir = iniciar_excluir
 privacidade = comando_privacidade
-ajuda = comando_ajuda
 
 
 # --- MENU FLUTUANTE DE COMANDOS DO TELEGRAM ---
 async def configurar_menu_comandos(app):
-    """Configura o menu de comandos oficial do Telegram."""
     comandos = [
         BotCommand("iniciar", "🚀 Menu principal e boas-vindas"),
         BotCommand("verificar_todos", "🔍 Verificar todas as regulações"),
@@ -583,6 +434,7 @@ async def configurar_menu_comandos(app):
         BotCommand("excluir", "🗑️ Excluir uma regulação"),
         BotCommand("privacidade", "🔒 Política de privacidade e LGPD"),
         BotCommand("ajuda", "❓ Central de ajuda e suporte"),
+        BotCommand("suporte", "💬 Falar com o suporte"),
     ]
     await app.bot.set_my_commands(comandos)
 
@@ -592,16 +444,12 @@ conv_consulta_especifica = ConversationHandler(
     entry_points=[
         CommandHandler("consultar", iniciar_verificar_especifico),
         CommandHandler("verificar_especifico", iniciar_verificar_especifico),
-        CallbackQueryHandler(
-            iniciar_verificar_especifico, pattern="^verificar_especifico$"
-        ),
+        CallbackQueryHandler(iniciar_verificar_especifico, pattern="^verificar_especifico$"),
     ],
     states={
         CONSULTAR_ID: [
             CallbackQueryHandler(processar_verificar_especifico),
-            MessageHandler(
-                filters.TEXT & ~filters.COMMAND, processar_verificar_especifico
-            ),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, processar_verificar_especifico),
         ]
     },
     fallbacks=[CommandHandler("cancelar", cancelar_operacao)],
@@ -612,42 +460,19 @@ conv_cadastro = ConversationHandler(
     entry_points=[
         CommandHandler("cadastrar", iniciar_cadastro_manual),
         CommandHandler("cadastrar_nova", iniciar_cadastro_manual),
-        CallbackQueryHandler(
-            iniciar_cadastro_manual, pattern="^cadastrar_nova$"
-        ),
+        CallbackQueryHandler(iniciar_cadastro_manual, pattern="^cadastrar_nova$"),
     ],
     states={
-        ETAPA_SUS: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, receber_sus)
-        ],
-        ETAPA_NOME: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, receber_nome)
-        ],
-        ETAPA_CELULAR: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, receber_celular)
-        ],
-        ETAPA_NASCIMENTO: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, receber_nascimento)
-        ],
-        ETAPA_REGULACAO: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, receber_regulacao)
-        ],
-        ETAPA_CBO: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, receber_cbo)
-        ],
-        ETAPA_PROCEDIMENTO: [
-            MessageHandler(
-                filters.TEXT & ~filters.COMMAND, receber_procedimento
-            )
-        ],
+        ETAPA_SUS: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_sus)],
+        ETAPA_NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_nome)],
+        ETAPA_CELULAR: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_celular)],
+        ETAPA_NASCIMENTO: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_nascimento)],
+        ETAPA_REGULACAO: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_regulacao)],
+        ETAPA_CBO: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_cbo)],
+        ETAPA_PROCEDIMENTO: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_procedimento)],
         ETAPA_LGPD: [CallbackQueryHandler(finalizar_cadastro)],
     },
-    fallbacks=[
-        CommandHandler("cancelar", cancelar_operacao),
-        MessageHandler(
-            filters.Regex("^🚫 Cancelar Operação$"), cancelar_operacao
-        ),
-    ],
+    fallbacks=[CommandHandler("cancelar", cancelar_operacao)],
     per_message=False,
 )
 
@@ -657,21 +482,9 @@ conv_corrigir = ConversationHandler(
         CallbackQueryHandler(iniciar_corrigir, pattern="^corrigir$"),
     ],
     states={
-        SELECIONAR_REGULACAO: [
-            CallbackQueryHandler(
-                selecionar_regulacao_callback,
-                pattern="^(corr_reg_|cancelar_corr)",
-            )
-        ],
-        SELECIONAR_CAMPO: [
-            CallbackQueryHandler(
-                selecionar_campo_callback,
-                pattern="^(form_edit_|form_salvar_|corr_campo_|cancelar_corr)",
-            )
-        ],
-        AGUARDAR_NOVO_VALOR: [
-            MessageHandler(filters.TEXT & ~filters.COMMAND, salvar_novo_valor)
-        ],
+        SELECIONAR_REGULACAO: [CallbackQueryHandler(selecionar_regulacao_callback, pattern="^(corr_reg_|cancelar_corr)")],
+        SELECIONAR_CAMPO: [CallbackQueryHandler(selecionar_campo_callback, pattern="^(form_edit_|form_salvar_|corr_campo_|cancelar_corr)")],
+        AGUARDAR_NOVO_VALOR: [MessageHandler(filters.TEXT & ~filters.COMMAND, salvar_novo_valor)],
     },
     fallbacks=[CommandHandler("cancelar", cancelar_operacao)],
     per_message=False,
@@ -683,64 +496,12 @@ conv_excluir = ConversationHandler(
         CallbackQueryHandler(iniciar_excluir, pattern="^excluir$"),
     ],
     states={
-        SELECIONAR_REGULACAO_EXCLUIR: [
-            CallbackQueryHandler(
-                selecionar_regulacao_excluir_callback,
-                pattern="^(excl_reg_|cancelar_excl)",
-            )
-        ],
-        CONFIRMAR_EXCLUSAO: [
-            CallbackQueryHandler(
-                confirmar_exclusao_callback,
-                pattern="^(conf_excl_sim|cancelar_excl)",
-            )
-        ],
+        SELECIONAR_REGULACAO_EXCLUIR: [CallbackQueryHandler(selecionar_regulacao_excluir_callback, pattern="^(excl_reg_|cancelar_excl)")],
+        CONFIRMAR_EXCLUSAO: [CallbackQueryHandler(confirmar_exclusao_callback, pattern="^(conf_excl_sim|cancelar_excl)")],
     },
     fallbacks=[CommandHandler("cancelar", cancelar_operacao)],
     per_message=False,
 )
-
-
-# --- PROCESSADOR DE CLIQUES E TEXTOS DO MENU ---
-async def tratar_menu_interativo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Mapeia comandos digitados para as devidas funções."""
-    if not update.message or not update.message.text:
-        return
-
-    if context.user_data.get("em_fluxo") or context.user_data.get("aguardando_input"):
-        return
-
-    texto = update.message.text.strip().lower()
-
-    if any(k in texto for k in ["início", "inicio", "menu principal", "/iniciar"]):
-        await start(update, context)
-    elif any(k in texto for k in ["corrigir", "corrigir id", "/corrigir"]):
-        await iniciar_corrigir(update, context)
-    elif any(k in texto for k in ["cadastrar nova", "cadastrar", "/cadastrar_nova"]):
-        await iniciar_cadastro_manual(update, context)
-    elif any(k in texto for k in ["verificar todas", "verificar_todos", "/verificar_todos"]):
-        await comando_verificar_todas(update, context)
-    elif any(k in texto for k in ["verificar específica", "verificar especifica", "específica", "/verificar_especifico"]):
-        await iniciar_verificar_especifico(update, context)
-    elif any(k in texto for k in ["planos", "assinaturas", "/planos"]):
-        await comando_planos(update, context)
-    elif any(k in texto for k in ["excluir", "/excluir"]):
-        await iniciar_excluir(update, context)
-    elif any(k in texto for k in ["privacidade", "lgpd", "/privacidade"]):
-        await comando_privacidade(update, context)
-    elif any(k in texto for k in ["ajuda", "suporte", "/ajuda", "/suporte"]):
-        await comando_ajuda(update, context)
-    elif any(k in texto for k in ["cancelar", "cancelar operação", "/cancelar"]):
-        await update.message.reply_text("❌ Operação cancelada.")
-    else:
-        if texto.isdigit() and len(texto) >= 10:
-            return
-
-        await update.message.reply_text(
-            "⚠️ Opção não reconhecida.\n\n"
-            "Por favor, acesse as opções pelo menu nativo do Telegram (botão [/]).",
-            parse_mode="HTML"
-        )
 
 
 # --- EXPORTAÇÃO DE SÍMBOLOS DO HANDLER ---
@@ -761,8 +522,16 @@ __all__ = [
     "ETAPA_LGPD",
     "start",
     "comando_ajuda",
+    "comando_suporte",
     "callback_ajuda",
+    "voltar_ajuda",
+    "faq_o_que_e",
+    "faq_rastrear",
+    "faq_seguranca",
+    "faq_corrigir",
     "comando_privacidade",
+    "callback_faq_suporte",
+    "callback_privacidade_voltar",
     "comando_planos",
     "cancelar_operacao",
     "configurar_menu_comandos",
@@ -792,42 +561,7 @@ __all__ = [
     "conv_cadastro",
     "conv_corrigir",
     "conv_excluir",
-    "tratar_menu_interativo",
     "obter_menu_principal",
     "obter_menu_planos",
     "detalhar_plano",
 ]
-
-async def callback_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Responde ao clique no botão Ajuda com o script da Central de Atendimento Automatizado."""
-    query = update.callback_query
-    await query.answer()
-
-    script_atendimento = (
-        "🤖 <b>Central de Atendimento Automatizado — AlertaSUS</b>\n\n"
-        "Seja bem-vindo(a) ao suporte do AlertaSUS! Nosso sistema automatizado está pronto "
-        "para auxiliar você com rapidez e precisão.\n\n"
-        "📌 <b>O que você pode fazer por aqui?</b>\n"
-        "• Consultar o status das suas regulações ativas.\n"
-        "• Tirar dúvidas sobre planos e renovação de assinatura.\n"
-        "• Obter orientações sobre a consulta via Cartão SUS ou ID da Regulação.\n"
-        "• Notificar divergências ou solicitar suporte técnico no sistema.\n\n"
-        "💡 <b>Como iniciar?</b>\n"
-        "Acesse nossa central dedicada abaixo para ser atendido pelo nosso assistente:"
-    )
-
-    teclado = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(
-                "🤖 Central de Atendimento ao Usuário AlertaSUS 2.0",
-                url="https://t.me/AlertaSUS_Atendimento_ao_Usuario"
-            )
-        ],
-        [InlineKeyboardButton("⬅️ Voltar", callback_data="voltar_inicio")]
-    ])
-
-    await query.edit_message_text(
-        script_atendimento,
-        parse_mode="HTML",
-        reply_markup=teclado
-    )

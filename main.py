@@ -29,22 +29,38 @@ from handler import (
     comando_privacidade,
     comando_verificar_todas,
     callback_ajuda,
+    faq_o_que_e,
+    faq_rastrear,
+    faq_seguranca,
+    faq_corrigir,
+    detalhar_plano,        # <--- Adicionada a importação que faltava
+    voltar_ajuda,          # <--- Adicionada também para evitar futuros erros
     conv_cadastro,
     conv_consulta_especifica,
-    conv_corrigir,
     conv_excluir,
-    detalhar_plano,
     iniciar_cadastro_manual,
     iniciar_corrigir,
     iniciar_excluir,
     iniciar_verificar_especifico,
     start,
+    callback_faq_suporte,
+    callback_privacidade_voltar,
+)
+from handler_gestao import (
+    selecionar_regulacao_callback,
+    selecionar_campo_callback,
+    salvar_novo_valor,
 )
 from handler_admin import (
     comando_conceder_cortesia,
     comando_remover_cortesia,
 )
 from handler_pagamento import gerar_pagamento_pix
+from utils import (
+    SELECIONAR_REGULACAO,
+    SELECIONAR_CAMPO,
+    AGUARDAR_NOVO_VALOR,
+)
 
 # Configuração de Logs
 logging.basicConfig(
@@ -99,6 +115,28 @@ def main():
     # Adicionando o Handler de Erros Globais
     app.add_error_handler(erro_global_handler)
 
+    # Configuração atualizada do ConversationHandler de Correção
+    conv_corrigir = ConversationHandler(
+        entry_points=[
+            CommandHandler("corrigir", iniciar_corrigir),
+            CallbackQueryHandler(selecionar_regulacao_callback, pattern="^corr_reg_")
+        ],
+        states={
+            SELECIONAR_REGULACAO: [
+                CallbackQueryHandler(selecionar_regulacao_callback, pattern="^corr_reg_")
+            ],
+            SELECIONAR_CAMPO: [
+                CallbackQueryHandler(selecionar_campo_callback, pattern="^corr_campo_")
+            ],
+            AGUARDAR_NOVO_VALOR: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, salvar_novo_valor)
+            ],
+        },
+        fallbacks=[
+            CallbackQueryHandler(selecionar_regulacao_callback, pattern="^cancelar_corr$")
+        ],
+    )
+
     # 1. Registro dos ConversationHandlers (Fluxos em etapas)
     app.add_handler(conv_cadastro)
     app.add_handler(conv_consulta_especifica)
@@ -144,6 +182,14 @@ def main():
     )
     app.add_handler(CallbackQueryHandler(comando_planos, pattern="^planos$"))
     app.add_handler(CallbackQueryHandler(start, pattern="^iniciar$"))
+    app.add_handler(CallbackQueryHandler(callback_faq_suporte, pattern="^abrir_faq_suporte$"))
+    app.add_handler(CallbackQueryHandler(callback_privacidade_voltar, pattern="^privacidade_voltar$"))
+    app.add_handler(CallbackQueryHandler(callback_ajuda, pattern="^ajuda$"))
+    app.add_handler(CallbackQueryHandler(faq_o_que_e, pattern="^faq_o_que_e$"))
+    app.add_handler(CallbackQueryHandler(faq_rastrear, pattern="^faq_rastrear$"))
+    app.add_handler(CallbackQueryHandler(faq_seguranca, pattern="^faq_seguranca$"))
+    app.add_handler(CallbackQueryHandler(faq_corrigir, pattern="^faq_corrigir$"))
+    app.add_handler(CallbackQueryHandler(voltar_ajuda, pattern="^voltar_ajuda$"))
     app.add_handler(
         CallbackQueryHandler(
             comando_verificar_todas, pattern="^verificar_todos$"
@@ -156,7 +202,7 @@ def main():
     )
 
     # 5. Inicialização e Execução do Bot
-    logger.info("Iniciando o bot AlertaSUS (sem suporte)...")
+    logger.info("Iniciando o bot AlertaSUS...")
     app.run_polling()
 
 
