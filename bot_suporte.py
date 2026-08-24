@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from warnings import filterwarnings
 from dotenv import load_dotenv
+from zoneinfo import ZoneInfo
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.warnings import PTBUserWarning
@@ -16,18 +17,20 @@ from telegram.ext import (
     CommandHandler,
 )
 
-from config import (
-    CANAL_SUPORTE_ID,
-    FUSO_HORARIO,
-    MSG_ATENDIMENTO_ENCERRADO,
-    TELEGRAM_BOT_TOKEN,
-)
-
 load_dotenv()
 
 filterwarnings(action="ignore", message=r".*CallbackQueryHandler", category=PTBUserWarning)
 logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
 logger = logging.getLogger(__name__)
+
+# ==================== CARREGAMENTO DE VARIÁVEIS ISOLADAS ====================
+TELEGRAM_TOKEN_SUPORTE = os.getenv("TELEGRAM_TOKEN_SUPORTE")
+CANAL_SUPORTE_ID = int(os.getenv("CANAL_SUPORTE_ID", "0"))
+FUSO_HORARIO = ZoneInfo("America/Sao_Paulo")
+MSG_ATENDIMENTO_ENCERRADO = "Atendimento encerrado."
 
 # ==================== DADOS COMPARTILHADOS ====================
 CHAMADOS_ATIVOS = {}        # user_id -> message_id no canal
@@ -492,9 +495,9 @@ handlers = [
 
 
 def main():
-    token = TELEGRAM_BOT_TOKEN
+    token = TELEGRAM_TOKEN_SUPORTE
     if not token:
-        logger.error("Token do bot de suporte não encontrado!")
+        logger.error("⚠️ Token do bot de suporte não encontrado nas variáveis de ambiente!")
         return
 
     application = ApplicationBuilder().token(token).build()
@@ -503,7 +506,7 @@ def main():
         application.add_handler(handler)
 
     logger.info("🎧 Bot de Atendimento e Suporte rodando isolado com segurança!")
-    application.run_polling()
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
