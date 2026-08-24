@@ -10,7 +10,6 @@ from admin import (
     comando_menu_admin,
 )
 import logging
-from suporte import handlers as suporte_handlers
 from telegram import BotCommand, BotCommandScopeAllPrivateChats
 from telegram.error import NetworkError, TimedOut
 from telegram.ext import (

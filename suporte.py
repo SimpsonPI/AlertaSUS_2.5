@@ -582,8 +582,15 @@ async def comando_privacidade(update, context):
 
 async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Processa TODAS as mensagens de texto (usuário E admin) de forma unificada"""
+    if not update.effective_user or not update.effective_chat:
+        return
+        
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
+    
+    if not update.message or not update.message.text:
+        return
+        
     texto = update.message.text
     
     # CASO 1: Mensagem enviada no CANAL DE SUPORTE (Admin respondendo)
@@ -601,18 +608,21 @@ async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
             return
         
         try:
-            # Envia a resposta diretamente para o chat privado do usuário usando o bot de atendimento
+            # Envia a resposta diretamente para o chat privado do usuário
             await context.bot.send_message(
                 chat_id=user_id_destino,
                 text=f"💬 <b>Suporte:</b> {texto}",
                 parse_mode="HTML"
             )
             
-            # Atualiza o histórico registrando corretamente como 'suporte'
+            # Atualiza o histórico de conversas de forma assíncrona e segura
             async with LOCK_DADOS:
                 atualizar_historico(user_id_destino, 'suporte', texto)
                 await atualizar_interface_usuario(context, user_id_destino)
-                await atualizar_canal_suporte(context, user_id_destino)
+                try:
+                    await atualizar_canal_suporte(context, user_id_destino)
+                except Exception:
+                    pass  # Ignora se a mensagem do canal não mudou visualmente
             
             await update.message.reply_text(f"✅ Resposta enviada com sucesso para o usuário <code>{user_id_destino}</code>!", parse_mode="HTML")
             
@@ -633,7 +643,10 @@ async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
     async with LOCK_DADOS:
         atualizar_historico(user_id, 'usuario', texto)
         await atualizar_interface_usuario(context, user_id)
-        await atualizar_canal_suporte(context, user_id)
+        try:
+            await atualizar_canal_suporte(context, user_id)
+        except Exception:
+            pass
 
 
 # ==================== HANDLERS ====================
