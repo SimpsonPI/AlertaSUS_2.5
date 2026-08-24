@@ -10,11 +10,6 @@ from admin import (
     comando_menu_admin,
 )
 import logging
-from bot_suporte import (
-    handlers as suporte_handlers,
-    menu_suporte,
-    exibir_resposta_faq,
-)
 from telegram import BotCommand, BotCommandScopeAllPrivateChats
 from telegram.error import NetworkError, TimedOut
 from telegram.ext import (
@@ -83,8 +78,6 @@ async def registrar_menu_nativo(app):
         BotCommand("excluir", "Excluir Regulação"),
         BotCommand("planos", "Ver Planos de Assinatura"),
         BotCommand("privacidade", "Política de Privacidade e LGPD"),
-        BotCommand("ajuda", "Central de Atendimento"),
-        BotCommand("suporte", "Suporte Técnico"),
         BotCommand("admin", "Painel Administrativo"),
         BotCommand("estatisticas", "Estatísticas do Bot"),
         BotCommand("ativos", "Assinaturas Ativas"),
@@ -111,12 +104,8 @@ def main():
     app.add_handler(conv_consulta_especifica)
     app.add_handler(conv_corrigir)
     app.add_handler(conv_excluir)
-    
-    # 2. Registro dos Handlers do Suporte unificado (substitui o antigo fluxo isolado)
-    for handler in suporte_handlers:
-        app.add_handler(handler)
 
-    # 3. Comandos Principais
+    # 2. Comandos Principais
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("iniciar", start))
     app.add_handler(CommandHandler("cadastrar_nova", iniciar_cadastro_manual))
@@ -128,10 +117,8 @@ def main():
     app.add_handler(CommandHandler("excluir", iniciar_excluir))
     app.add_handler(CommandHandler("planos", comando_planos))
     app.add_handler(CommandHandler("privacidade", comando_privacidade))
-    app.add_handler(CommandHandler("ajuda", menu_suporte))
-    app.add_handler(CommandHandler("suporte", menu_suporte))
 
-    # 4. Comandos Administrativos
+    # 3. Comandos Administrativos
     app.add_handler(
         CommandHandler("conceder_cortesia", comando_conceder_cortesia)
     )
@@ -150,7 +137,7 @@ def main():
     app.add_handler(CommandHandler("aviso", comando_aviso))
     app.add_handler(CommandHandler("menu", comando_menu_admin))
 
-    # 5. Callbacks de Botões Inline
+    # 4. Callbacks de Botões Inline
     app.add_handler(CallbackQueryHandler(detalhar_plano, pattern="^plano_"))
     app.add_handler(
         CallbackQueryHandler(gerar_pagamento_pix, pattern="^pix_")
@@ -167,79 +154,9 @@ def main():
             comando_privacidade, pattern="^privacidade$"
         )
     )
-    app.add_handler(CallbackQueryHandler(exibir_resposta_faq, pattern="^faq_"))
-    app.add_handler(CallbackQueryHandler(menu_suporte, pattern="^ajuda$"))
 
-    # 6. Inicialização e Execução do Bot
-    logger.info("Iniciando o bot AlertaSUS com suporte integrado...")
-    app.run_polling()
-
-
-if __name__ == "__main__":
-    main()
-
-    # 2. Comandos Principais
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("iniciar", start))
-    application.add_handler(CommandHandler("cadastrar_nova", iniciar_cadastro_manual))
-    application.add_handler(CommandHandler("verificar_todos", comando_verificar_todas))
-    application.add_handler(
-        CommandHandler("verificar_especifico", iniciar_verificar_especifico)
-    )
-    application.add_handler(CommandHandler("corrigir", iniciar_corrigir))
-    application.add_handler(CommandHandler("excluir", iniciar_excluir))
-    application.add_handler(CommandHandler("planos", comando_planos))
-    application.add_handler(CommandHandler("privacidade", comando_privacidade))
-    application.add_handler(CommandHandler("ajuda", menu_suporte))
-    application.add_handler(CommandHandler("suporte", menu_suporte))
-
-    # 3. Comandos Administrativos[cite: 7]
-    app.add_handler(
-        CommandHandler("conceder_cortesia", comando_conceder_cortesia)
-    )
-    app.add_handler(CommandHandler("cortesia", comando_conceder_cortesia))
-    app.add_handler(CommandHandler("conceder", comando_conceder_cortesia))
-    app.add_handler(
-        CommandHandler("remover_cortesia", comando_remover_cortesia)
-    )
-    app.add_handler(CommandHandler("remover", comando_remover_cortesia))
-    app.add_handler(CommandHandler("admin", comando_menu_admin))
-    app.add_handler(CommandHandler("estatisticas", comando_estatisticas))
-    app.add_handler(CommandHandler("ativos", comando_listar_ativos))
-    app.add_handler(CommandHandler("detalhes", comando_detalhes))
-    app.add_handler(CommandHandler("dar_plano", comando_dar_plano))
-    app.add_handler(CommandHandler("cortesia", comando_cortesia))
-    app.add_handler(CommandHandler("remover_cortesia", comando_remover_cortesia))
-    app.add_handler(CommandHandler("bloquear", comando_bloquear))
-    app.add_handler(CommandHandler("aviso", comando_aviso))
-    app.add_handler(CommandHandler("menu", comando_menu_admin))
-
-    # 4. Callbacks de Botões Inline[cite: 7]
-    app.add_handler(CallbackQueryHandler(detalhar_plano, pattern="^plano_"))
-    app.add_handler(
-        CallbackQueryHandler(gerar_pagamento_pix, pattern="^pix_")
-    )
-    app.add_handler(CallbackQueryHandler(comando_planos, pattern="^planos$"))
-    app.add_handler(CallbackQueryHandler(start, pattern="^iniciar$"))
-    app.add_handler(
-        CallbackQueryHandler(
-            comando_verificar_todas, pattern="^verificar_todos$"
-        )
-    )
-    app.add_handler(
-        CallbackQueryHandler(
-            comando_privacidade, pattern="^privacidade$"
-        )
-    )
-    app.add_handler(CallbackQueryHandler(exibir_resposta_faq, pattern="^faq_"))
-    app.add_handler(CallbackQueryHandler(iniciar_atendimento, pattern="^iniciar_atendimento_20$"))
-    app.add_handler(CallbackQueryHandler(menu_suporte, pattern="^ajuda$"))
-
-    # Handler genérico de texto para menu interativo caso necessário
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, tratar_menu_interativo))
-
-    # 5. Inicialização e Execução do Bot[cite: 7]
-    logger.info("Iniciando o bot AlertaSUS...")
+    # 5. Inicialização e Execução do Bot
+    logger.info("Iniciando o bot AlertaSUS (sem suporte)...")
     app.run_polling()
 
 
