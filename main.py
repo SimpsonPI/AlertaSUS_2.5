@@ -178,20 +178,20 @@ def main():
 if __name__ == "__main__":
     main()
 
-    # 2. Comandos Principais[cite: 7]
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("iniciar", start))
-    app.add_handler(CommandHandler("cadastrar_nova", iniciar_cadastro_manual))
-    app.add_handler(CommandHandler("verificar_todos", comando_verificar_todas))
-    app.add_handler(
+    # 2. Comandos Principais
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("iniciar", start))
+    application.add_handler(CommandHandler("cadastrar_nova", iniciar_cadastro_manual))
+    application.add_handler(CommandHandler("verificar_todos", comando_verificar_todas))
+    application.add_handler(
         CommandHandler("verificar_especifico", iniciar_verificar_especifico)
     )
-    app.add_handler(CommandHandler("corrigir", iniciar_corrigir))
-    app.add_handler(CommandHandler("excluir", iniciar_excluir))
-    app.add_handler(CommandHandler("planos", comando_planos))
-    app.add_handler(CommandHandler("privacidade", comando_privacidade))
-    app.add_handler(CommandHandler("ajuda", menu_suporte))
-    app.add_handler(CommandHandler("suporte", menu_suporte))
+    application.add_handler(CommandHandler("corrigir", iniciar_corrigir))
+    application.add_handler(CommandHandler("excluir", iniciar_excluir))
+    application.add_handler(CommandHandler("planos", comando_planos))
+    application.add_handler(CommandHandler("privacidade", comando_privacidade))
+    application.add_handler(CommandHandler("ajuda", menu_suporte))
+    application.add_handler(CommandHandler("suporte", menu_suporte))
 
     # 3. Comandos Administrativos[cite: 7]
     app.add_handler(
