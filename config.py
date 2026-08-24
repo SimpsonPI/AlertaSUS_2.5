@@ -1,5 +1,7 @@
 import os
 from dotenv import load_dotenv
+from supabase import create_client, Client
+from zoneinfo import ZoneInfo
 
 # Carrega o .env se existir localmente (no seu PC), mas ignora se não achar (no Railway)
 load_dotenv()
@@ -156,7 +158,6 @@ __all__ = [
     'SUPABASE_URL',
     'SUPABASE_KEY',
     'TELEGRAM_BOT_TOKEN',
-    'ADMIN_ID',
     
     # IDs de administração
     'ADMIN_CHAT_ID',
