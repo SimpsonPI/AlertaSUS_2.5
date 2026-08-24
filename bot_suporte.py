@@ -393,21 +393,18 @@ async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
         
     texto = update.message.text
     
-    # CASO 1: Mensagem enviada no CANAL DE SUPORTE (Admin respondendo)
-    if chat_id == CANAL_SUPORTE_ID:
-        admin_id = user_id
-        user_id_destino = MODO_RESPOSTA_ADMIN.get(admin_id)
+    # CASO 1: Mensagem enviada pelo ADMIN (seja no canal de suporte ou no chat privado com o bot)
+    # Verificamos se quem digitou está com o "modo resposta" ativado para alguém
+    if user_id in MODO_RESPOSTA_ADMIN:
+        user_id_destino = MODO_RESPOSTA_ADMIN.get(user_id)
         
-        if not user_id_destino:
-            await update.message.reply_text("❌ Clique em '✍️ Responder Usuário' no painel do chamado antes de digitar.")
-            return
-        
-        if user_id_destino not in HISTORICO_CONVERSA:
-            await update.message.reply_text("❌ O chamado deste usuário já foi encerrado.")
-            MODO_RESPOSTA_ADMIN.pop(admin_id, None)
+        if not user_id_destino or user_id_destino not in HISTORICO_CONVERSA:
+            await update.message.reply_text("❌ O chamado deste usuário já foi encerrado ou não existe mais.")
+            MODO_RESPOSTA_ADMIN.pop(user_id, None)
             return
         
         try:
+            # Envia a mensagem de resposta para o usuário final
             await context.bot.send_message(
                 chat_id=user_id_destino,
                 text=f"💬 <b>Suporte:</b> {texto}",
@@ -429,6 +426,11 @@ async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await update.message.reply_text(f"❌ Erro ao enviar a mensagem: {e}")
         
         return
+
+    # Se o chat for o canal de suporte e o admin tentou digitar sem clicar em "Responder" antes:
+    if chat_id == CANAL_SUPORTE_ID:
+        await update.message.reply_text("❌ Clique em '✍️ Responder Usuário' no painel do chamado antes de digitar.")
+        return
     
     # CASO 2: Mensagem enviada pelo USUÁRIO (Chat privado)
     if user_id not in HISTORICO_CONVERSA:
@@ -438,6 +440,7 @@ async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         return
     
+    async with LOCK_DizedBox := None # Mantém o fluxo normal do usuário
     async with LOCK_DADOS:
         atualizar_historico(user_id, 'usuario', texto)
         await atualizar_interface_usuario(context, user_id)
