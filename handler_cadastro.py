@@ -1,8 +1,8 @@
-# handlers_cadastro.py
+# handler_cadastro.py
 import re
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes, ConversationHandler
-from database import salvar_regulacao, registrar_consentimento_lgpd
+from database import salvar_regulacao, registrar_consentimento_lgpd, supabase
 from utils import (
     DISCLAIMER_TEXTO, TECLADO_MENU, TECLADO_CANCELAR,
     ETAPA_SUS, ETAPA_NOME, ETAPA_CELULAR, ETAPA_NASCIMENTO,
@@ -21,39 +21,56 @@ async def iniciar_cadastro_manual(update: Update, context: ContextTypes.DEFAULT_
 
 async def receber_sus(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if await verificar_se_e_menu_e_executar(update, context): return ConversationHandler.END
-    sus = re.sub(r"\D", "", update.message.text)
-    if len(sus) != 15:
-        await update.message.reply_text("⚠️ O Cartão SUS deve conter exatamente 15 dígitos. Tente novamente:")
-        return ETAPA_SUS
-    context.user_data["sus"] = sus
-    await update.message.reply_text("Qual o <b>nome completo</b> do paciente?", parse_mode="HTML")
+    chat_id = update.effective_chat.id
+    numero_sus = update.message.text.strip()
+    
+    context.user_data['sus'] = numero_sus
+
+    try:
+        print(f"DEBUG: Buscando SUS {numero_sus} no Supabase...")
+        resposta = supabase.table("AlertaSUS_2.0").select("*").eq("numero_sus", numero_sus).execute()
+        registros = resposta.data
+
+        if registros and len(registros) > 0:
+            dados_antigos = registros[0]
+            context.user_data['nome'] = dados_antigos.get('nome_paciente')
+            context.user_data['celular'] = dados_antigos.get('celular')
+            context.user_data['nascimento'] = dados_antigos.get('data_nascimento')
+
+            print("DEBUG: SUS encontrado! Indo para ETAPA_REGULACAO.")
+            await update.message.reply_text(
+                f"🔍 <b>Cartão do SUS já cadastrado!</b>\n"
+                f"Autopreenchemos os dados de: <b>{dados_antigos.get('nome_paciente')}</b>.\n\n"
+                f"Agora, por favor, digite o <b>Número da Regulação</b>:",
+                parse_mode="HTML"
+            )
+            return ETAPA_REGULACAO
+            
+    except Exception as e:
+        print(f"ERRO no bloco do SUS: {e}")
+
+    print("DEBUG: SUS não encontrado. Indo para ETAPA_NOME.")
+    await update.message.reply_text("Qual o nome completo do paciente?")
     return ETAPA_NOME
 
 async def receber_nome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if await verificar_se_e_menu_e_executar(update, context): return ConversationHandler.END
     context.user_data["nome"] = update.message.text.strip()
-    await update.message.reply_text("Informe o <b>número do celular/WhatsApp</b> (com DDD):", parse_mode="HTML")
+    await update.message.reply_text("Digite o número de <b>celular/WhatsApp</b> (com DDD):", parse_mode="HTML")
     return ETAPA_CELULAR
 
 async def receber_celular(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if await verificar_se_e_menu_e_executar(update, context): return ConversationHandler.END
-    celular_raw = update.message.text
-    if len(re.sub(r"\D", "", celular_raw)) < 10:
-        await update.message.reply_text("⚠️ Número inválido. Digite o DDD + Número (ex: 86999998888):")
-        return ETAPA_CELULAR
-    context.user_data["celular"] = formatar_celular(celular_raw)
-    await update.message.reply_text("Qual a <b>data de nascimento</b> do paciente? (DD/MM/AAAA):", parse_mode="HTML")
+    celular = formatar_celular(update.message.text.strip())
+    context.user_data["celular"] = celular
+    await update.message.reply_text("Digite a <b>data de nascimento</b> do paciente (DD/MM/AAAA):", parse_mode="HTML")
     return ETAPA_NASCIMENTO
 
 async def receber_nascimento(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if await verificar_se_e_menu_e_executar(update, context): return ConversationHandler.END
-    data_formatada = formatar_data(update.message.text.strip())
-    if len(data_formatada) == 10 and data_formatada.count("-") == 2:
-        context.user_data["nascimento"] = data_formatada
-    else:
-        await update.message.reply_text("⚠️ Formato de data inválido! Digite no formato <b>DD/MM/AAAA</b>:", parse_mode="HTML")
-        return ETAPA_NASCIMENTO
-    await update.message.reply_text("Digite o <b>número do ID da Regulação</b> (apenas números):", parse_mode="HTML")
+    nascimento = formatar_data(update.message.text.strip())
+    context.user_data["nascimento"] = nascimento
+    await update.message.reply_text("Agora, por favor, digite o <b>Número da Regulação</b>:", parse_mode="HTML")
     return ETAPA_REGULACAO
 
 async def receber_regulacao(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -94,17 +111,21 @@ async def finalizar_cadastro(update: Update, context: ContextTypes.DEFAULT_TYPE)
     query = update.callback_query
     await query.answer()
 
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    dados = context.user_data
+
     if query.data == "cancelar_cadastro":
-        await query.edit_message_text("❌ Cadastro cancelado pelo usuário.")
-        await query.message.reply_text("Menu principal:", reply_markup=TECLADO_MENU)
+        try:
+            await query.message.delete()
+        except Exception:
+            pass
+        await context.bot.send_message(chat_id=chat_id, text="❌ Cadastro cancelado pelo usuário.", reply_markup=TECLADO_MENU)
         context.user_data.clear()
         return ConversationHandler.END
 
-    user_id = update.effective_user.id
-    dados = context.user_data
-
     dados_salvar = {
-        "id_do_chat": user_id,
+        "chat_id": user_id,
         "numero_sus": dados.get("sus"),
         "nome_paciente": dados.get("nome"),
         "celular": dados.get("celular"),
@@ -114,14 +135,44 @@ async def finalizar_cadastro(update: Update, context: ContextTypes.DEFAULT_TYPE)
         "procedimento": dados.get("procedimento")
     }
 
+    print("DEBUG 1: Salvando no Supabase...")
     sucesso = await salvar_regulacao(dados_salvar)
-    await registrar_consentimento_lgpd(user_id, aceito=True)
+    print(f"DEBUG 2: salvar_regulacao = {sucesso}")
 
-    if sucesso:
-        await query.edit_message_text("✅ <b>Regulação cadastrada com sucesso!</b>\nEla será monitorada automaticamente pelo sistema.", parse_mode="HTML")
-    else:
-        await query.edit_message_text("❌ Ocorreu um erro ao salvar a regulação no Supabase. Tente novamente mais tarde.")
+    try:
+        registrar_consentimento_lgpd(user_id)
+        print("DEBUG 3: LGPD registrado com sucesso.")
+    except Exception as e:
+        print(f"DEBUG 3 AVISO LGPD: {e}")
 
-    await query.message.reply_text("O que deseja fazer agora?", reply_markup=TECLADO_MENU)
+    # 1. Apaga a mensagem do Termo LGPD para sumir com os botões travados
+    print("DEBUG 4: Apagando mensagem com os botões...")
+    try:
+        await query.message.delete()
+        print("DEBUG 5: Mensagem do termo apagada com sucesso.")
+    except Exception as e:
+        print(f"DEBUG 5 ERRO ao apagar mensagem: {e}")
+        try:
+            await query.edit_message_reply_markup(reply_markup=None)
+        except Exception:
+            pass
+
+    # 2. Envia a mensagem de confirmação no chat
+    print("DEBUG 6: Enviando mensagem de sucesso no chat...")
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text="✅ <b>Regulação cadastrada com sucesso!</b>\nEla será monitorada automaticamente pelo sistema.",
+        parse_mode="HTML"
+    )
+
+    # 3. Envia o Menu Principal
+    print("DEBUG 7: Enviando menu principal...")
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text="O que deseja fazer agora?",
+        reply_markup=TECLADO_MENU
+    )
+
     context.user_data.clear()
+    print("DEBUG 8: Fluxo finalizado com sucesso!")
     return ConversationHandler.END
