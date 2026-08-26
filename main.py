@@ -28,13 +28,15 @@ from handler import (
     comando_planos,
     comando_privacidade,
     comando_verificar_todas,
+    comando_ajuda,
+    comando_suporte,
     callback_ajuda,
     faq_o_que_e,
     faq_rastrear,
     faq_seguranca,
     faq_corrigir,
-    detalhar_plano,        # <--- Adicionada a importação que faltava
-    voltar_ajuda,          # <--- Adicionada também para evitar futuros erros
+    detalhar_plano,
+    voltar_ajuda,
     conv_cadastro,
     conv_consulta_especifica,
     conv_excluir,
@@ -94,6 +96,8 @@ async def registrar_menu_nativo(app):
         BotCommand("excluir", "Excluir Regulação"),
         BotCommand("planos", "Ver Planos de Assinatura"),
         BotCommand("privacidade", "Política de Privacidade e LGPD"),
+        BotCommand("ajuda", "Central de Ajuda e FAQ"),
+        BotCommand("suporte", "Falar com o Suporte"),
         BotCommand("admin", "Painel Administrativo"),
         BotCommand("estatisticas", "Estatísticas do Bot"),
         BotCommand("ativos", "Assinaturas Ativas"),
@@ -148,13 +152,13 @@ def main():
     app.add_handler(CommandHandler("iniciar", start))
     app.add_handler(CommandHandler("cadastrar_nova", iniciar_cadastro_manual))
     app.add_handler(CommandHandler("verificar_todos", comando_verificar_todas))
-    app.add_handler(
-        CommandHandler("verificar_especifico", iniciar_verificar_especifico)
-    )
+    app.add_handler(CommandHandler("verificar_especifico", iniciar_verificar_especifico))
     app.add_handler(CommandHandler("corrigir", iniciar_corrigir))
     app.add_handler(CommandHandler("excluir", iniciar_excluir))
     app.add_handler(CommandHandler("planos", comando_planos))
     app.add_handler(CommandHandler("privacidade", comando_privacidade))
+    app.add_handler(CommandHandler("ajuda", comando_ajuda))
+    app.add_handler(CommandHandler("suporte", comando_suporte))
 
     # 3. Comandos Administrativos
     app.add_handler(

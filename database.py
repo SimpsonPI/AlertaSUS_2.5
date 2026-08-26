@@ -164,14 +164,13 @@ def obter_regulacao_por_numero(num_reg: str):
         return None
 
 
-def salvar_regulacao(dados_regulacao: dict):
-    """Salva uma nova regulação na tabela do Supabase."""
+async def salvar_regulacao(dados):
     try:
-        res = supabase.table("AlertaSUS_2.0").insert(dados_regulacao).execute()
-        return res.data if res and res.data else True
+        supabase.table("AlertaSUS_2.0").insert(dados).execute()
+        return True
     except Exception as e:
-        logger.error(f"Erro ao salvar nova regulação: {e}")
-        return None
+        print(f"Erro: {e}")
+        return False
 
 
 def registrar_consentimento_lgpd(dados_consentimento: dict):

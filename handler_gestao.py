@@ -24,13 +24,22 @@ async def iniciar_corrigir(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     try:
         user_id = update.effective_user.id
         res = supabase.table("AlertaSUS_2.0").select("*").eq("chat_id", user_id).execute()
-        regulacoes = res.data if res.data else []
+        regulacoes_brutas = res.data if res.data else []
 
-        if not regulacoes:
+        if not regulacoes_brutas:
             msg = "⚠️ Nenhuma regulação cadastrada para corrigir."
             if update.message: await update.message.reply_text(msg)
             elif update.callback_query: await update.callback_query.message.reply_text(msg)
             return ConversationHandler.END
+
+        # 🛡️ Remove duplicatas com base no 'numero_reg' para a exibição
+        vistos = set()
+        regulacoes = []
+        for reg in regulacoes_brutas:
+            num_reg = reg.get("numero_reg")
+            if num_reg not in vistos:
+                vistos.add(num_reg)
+                regulacoes.append(reg)
 
         teclado = []
         for reg in regulacoes:
@@ -52,6 +61,39 @@ async def iniciar_corrigir(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         logger.error(f"Erro em iniciar_corrigir: {e}")
         return ConversationHandler.END
 
+async def mostrar_resumo_regulacao(update_or_query, context, num_reg):
+    """
+    Busca os dados atuais da regulação no Supabase e exibe o resumo para confirmação.
+    """
+    try:
+        response = supabase.table("AlertaSUS_2.0").select("*").eq("numero_reg", num_reg).execute()
+        
+        if response.data:
+            reg = response.data[0]
+            resumo = (
+                f"📋 <b>Regulação:</b> <code>{num_reg}</code>\n"
+                f"👤 <b>Paciente:</b> {reg.get('nome_paciente', 'Não informado')}\n"
+                f"🩺 <b>CBO / Especialidade:</b> {reg.get('cbo', 'Não informado')}\n"
+                f"📱 <b>Celular:</b> {reg.get('celular', 'Não informado')}\n"
+                f"🏥 <b>Procedimento:</b> {reg.get('procedimento', 'Não informado')}\n\n"
+                f"✅ <b>Alteração realizada com sucesso!</b>"
+            )
+            
+            teclado = [
+                [InlineKeyboardButton("✏️ Editar outro campo", callback_data=f"corr_reg_{num_reg}")],
+                [InlineKeyboardButton("🏁 Finalizar", callback_data="cancelar_corr")]
+            ]
+            reply_markup = InlineKeyboardMarkup(teclado)
+
+            if hasattr(update_or_query, "message") and update_or_query.message:
+                await update_or_query.message.reply_text(resumo, reply_markup=reply_markup, parse_mode="HTML")
+            elif hasattr(update_or_query, "edit_message_text"):
+                await update_or_query.edit_message_text(resumo, reply_markup=reply_markup, parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"Erro ao buscar resumo da regulação: {e}")
+        if hasattr(update_or_query, "message") and update_or_query.message:
+            await update_or_query.message.reply_text("✅ Campo atualizado com sucesso!", reply_markup=TECLADO_MENU)
+
 async def selecionar_regulacao_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
@@ -68,7 +110,7 @@ async def selecionar_regulacao_callback(update: Update, context: ContextTypes.DE
 
         teclado = [
             [InlineKeyboardButton("👤 Nome do Paciente", callback_data="corr_campo_nome_paciente")],
-            [InlineKeyboardButton("💳 Cartão SUS", callback_data="corr_campo_numero_sus")],
+            [InlineKeyboardButton("🩺 CBO / Especialidade", callback_data="corr_campo_cbo")],
             [InlineKeyboardButton("📱 Celular", callback_data="corr_campo_celular")],
             [InlineKeyboardButton("🩺 Procedimento", callback_data="corr_campo_procedimento")],
             [InlineKeyboardButton("❌ Cancelar", callback_data="cancelar_corr")]
@@ -112,7 +154,8 @@ async def salvar_novo_valor(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     try:
         supabase.table("AlertaSUS_2.0").update({campo: novo_valor}).eq("numero_reg", num_reg).execute()
-        await update.message.reply_text(f"✅ Campo <b>{campo}</b> atualizado com sucesso!", parse_mode="HTML", reply_markup=TECLADO_MENU)
+        # Exibe o espelho/resumo atualizado para confirmação do usuário
+        await mostrar_resumo_regulacao(update, context, num_reg)
     except Exception as e:
         logger.error(f"Erro ao salvar alteração no Supabase: {e}")
         await update.message.reply_text("❌ Erro ao atualizar o dado no banco de dados.", reply_markup=TECLADO_MENU)
@@ -126,13 +169,16 @@ async def iniciar_excluir(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     try:
         user_id = update.effective_user.id
         res = supabase.table("AlertaSUS_2.0").select("*").eq("chat_id", user_id).execute()
-        regulacoes = res.data if res.data else []
+        regulacoes_brutas = res.data if res.data else []
 
-        if not regulacoes:
-            msg = "⚠️ Nenhuma regulação cadastrada para excluir."
-            if update.message: await update.message.reply_text(msg)
-            elif update.callback_query: await update.callback_query.message.reply_text(msg)
-            return ConversationHandler.END
+        # Remove duplicatas com base no 'numero_reg' para a exibição
+        vistos = set()
+        regulacoes = []
+        for reg in regulacoes_brutas:
+            num_reg = reg.get("numero_reg")
+            if num_reg not in vistos:
+                vistos.add(num_reg)
+                regulacoes.append(reg)
 
         teclado = []
         for reg in regulacoes:
@@ -196,7 +242,7 @@ async def confirmar_exclusao_callback(update: Update, context: ContextTypes.DEFA
         num_reg = context.user_data.get("del_num_reg")
         user_id = update.effective_user.id
         try:
-            supabase.table("AlertaSUS_2.0").delete().eq("numero_reg", num_reg).eq("id_do_chat", user_id).execute()
+            supabase.table("AlertaSUS_2.0").delete().eq("numero_reg", num_reg).eq("chat_id", user_id).execute()
             await query.edit_message_text(f"🗑️ Regulação <b>{num_reg}</b> excluída com sucesso.", parse_mode="HTML")
         except Exception as e:
             logger.error(f"Erro ao excluir regulação no Supabase: {e}")

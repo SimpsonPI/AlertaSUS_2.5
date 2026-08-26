@@ -316,13 +316,44 @@ async def comando_privacidade(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 # --- FUNÇÕES DE AJUDA E SUPORTE ---
 async def comando_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Executa o comando /ajuda."""
-    await callback_ajuda(update, context)
-
+    """Envia o menu de ajuda e FAQs para o usuário."""
+    texto = (
+        "🤖 *Central de Ajuda e FAQ - AlertaSUS*\n\n"
+        "Selecione uma das opções abaixo para tirar suas dúvidas ou obter suporte:"
+    )
+    
+    teclado = [
+        [InlineKeyboardButton("❓ O que é o AlertaSUS?", callback_data="faq_o_que_e")],
+        [InlineKeyboardButton("🔍 Como rastrear?", callback_data="faq_rastrear")],
+        [InlineKeyboardButton("🔒 Segurança de Dados", callback_data="faq_seguranca")],
+        [InlineKeyboardButton("✏️ Como corrigir dados", callback_data="faq_corrigir")],
+        [InlineKeyboardButton("💬 Falar com Suporte", callback_data="abrir_faq_suporte")]
+    ]
+    reply_markup = InlineKeyboardMarkup(teclado)
+    
+    if update.message:
+        await update.message.reply_text(texto, reply_markup=reply_markup, parse_mode="Markdown")
+    elif update.callback_query:
+        await update.callback_query.message.edit_text(texto, reply_markup=reply_markup, parse_mode="Markdown")
 
 async def comando_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Executa o comando /suporte."""
-    await callback_ajuda(update, context)
+    """Envia os contatos e opções diretas de suporte."""
+    texto = (
+        "💬 *Central de Suporte*\n\n"
+        "Precisa de ajuda humana ou encontrou algum problema crítico?\n"
+        "Entre em contato conosco pelos canais oficiais ou utilize o menu de ajuda abaixo."
+    )
+    
+    teclado = [
+        [InlineKeyboardButton("❓ Ver Perguntas Frequentes (FAQ)", callback_data="ajuda")],
+        [InlineKeyboardButton("🔙 Voltar ao Início", callback_data="iniciar")]
+    ]
+    reply_markup = InlineKeyboardMarkup(teclado)
+    
+    if update.message:
+        await update.message.reply_text(texto, reply_markup=reply_markup, parse_mode="Markdown")
+    elif update.callback_query:
+        await update.callback_query.message.edit_text(texto, reply_markup=reply_markup, parse_mode="Markdown")
 
 
 async def callback_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -470,7 +501,7 @@ conv_cadastro = ConversationHandler(
         ETAPA_REGULACAO: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_regulacao)],
         ETAPA_CBO: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_cbo)],
         ETAPA_PROCEDIMENTO: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_procedimento)],
-        ETAPA_LGPD: [CallbackQueryHandler(finalizar_cadastro)],
+        ETAPA_LGPD: [CallbackQueryHandler(finalizar_cadastro, pattern="^(aceitar_lgpd|cancelar_cadastro)$")], # <--- ATUALIZE ESTA LINHA
     },
     fallbacks=[CommandHandler("cancelar", cancelar_operacao)],
     per_message=False,
