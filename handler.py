@@ -121,7 +121,7 @@ async def callback_faq_suporte(update: Update, context: ContextTypes.DEFAULT_TYP
     faq_texto = (
         "❓ <b>FAQ e Central de Ajuda — AlertaSUS 2.5</b>\n\n"
         "<b>1. O que é o AlertaSUS 2.5?</b>\n"
-        "É uma ferramenta inteligente para acompanhar o andamento de suas regulações de saúde (consultas, exames e cirurgias) de forma automatizada.\n\n"
+        "Serviço independente de monitoramento. Não possuímos vínculo oficial com a FMS ou Prefeitura de Teresina, fazemos o monitoramento do andamento de suas regulações de saúde (consultas, exames e cirurgias) de forma automatizada.\n\n"
         "<b>2. Como o bot rastreia minhas solicitações?</b>\n"
         "Utilizamos os dados informados por você (como o número da regulação) para verificar atualizações diretamente nos sistemas públicos.\n\n"
         "<b>3. Meus dados estão seguros?</b>\n"
