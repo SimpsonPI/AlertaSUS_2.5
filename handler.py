@@ -399,7 +399,12 @@ async def faq_o_que_e(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def faq_rastrear(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    texto = "🔍 <b>Como rastrear minha regulação?</b>\n\nCadastre seu número de solicitação ou CPF pelo menu para receber notificações automáticas de alteração de status."
+    texto = (
+        "🔍 <b>Como rastrear minha regulação?</b>\n\n"
+        "Cadastre o número da sua solicitação (regulação) pelo menu. "
+        "Depois, você pode usar a opção <b>'Verificar Específico'</b> para selecionar uma regulação cadastrada e checar o status, "
+        "ou <b>'Verificar Todas'</b> para checar todas as suas regulações de uma só vez de forma automática."
+    )
     teclado = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Voltar", callback_data="ajuda")]])
     await query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
 
