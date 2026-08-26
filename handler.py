@@ -420,7 +420,7 @@ async def faq_seguranca(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def faq_corrigir(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    texto = "✏️ <b>Como corrigir dados?</b>\n\nUtilize o comando de correção no menu principal para atualizar informações cadastrais ou CBO."
+    texto = "✏️ <b>Como corrigir dados?</b>\n\nUtilize o comando de correção no menu principal para atualizar informações cadastrais ou CBO (Especialidade)."
     teclado = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Voltar", callback_data="ajuda")]])
     await query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
 
