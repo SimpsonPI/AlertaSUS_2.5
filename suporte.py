@@ -178,10 +178,12 @@ async def atualizar_canal_suporte(context, user_id: int):
 # ==================== MENUS ====================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Comando /start"""
+    """Comando /start atualizado com canal de suporte e e-mail oficial"""
     texto = (
         "🤖 <b>Bem-vindo ao AlertaSUS 2.0!</b>\n\n"
-        "Escolha uma opção abaixo:"
+        "Escolha uma opção abaixo:\n\n"
+        "📧 <b>Suporte Oficial:</b> suporte@alertasus.exemplo\n"
+        "🤖 <b>Bot de Atendimento:</b> @SuporteAlertaSUS_bot"
     )
     teclado = InlineKeyboardMarkup([
         [InlineKeyboardButton("📖 Ajuda / FAQ", callback_data="ajuda")],
@@ -192,9 +194,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def menu_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Menu de ajuda com FAQ"""
+    """Menu de ajuda com FAQ e textos prontos solicitados"""
     texto = (
-        "🤖 <b>Central de Atendimento / Ajuda AlertaSUS 2.0</b>\n\n"
+        "🤖 <b>Central de Ajuda - AlertaSUS</b>\n\n"
+        "Este bot monitora e envia informações atualizadas sobre dados de saúde e pesquisas.\n\n"
+        "• <b>Comandos disponíveis:</b> Use os botões do menu ou digite os filtros por estado.\n"
+        "• <b>Suporte Técnico:</b> Se encontrar algum erro ou inconsistência, entre em contato pelo e-mail <code>suporte@alertasus.exemplo</code> ou fale diretamente com nossa equipe pelo bot de atendimento: @SuporteAlertaSUS_bot.\n\n"
         "Selecione uma opção:\n\n"
         "1️⃣ Como cadastrar regulação?\n"
         "2️⃣ Como consultar regulações?\n"
@@ -220,12 +225,18 @@ async def menu_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def menu_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Menu principal de suporte"""
-    texto = "🎧 <b>Central de Suporte</b>\n\nEscolha uma opção:"
+    """Menu principal de suporte integrado com os canais e horários"""
+    texto = (
+        "🛠️ <b>Canais de Atendimento</b>\n\n"
+        "Precisa de auxílio ou deseja reportar um problema?\n"
+        "• <b>E-mail:</b> <code>suporte@alertasus.exemplo</code>\n"
+        "• <b>Telegram:</b> @SuporteAlertaSUS_bot\n\n"
+        "Nossa equipe responderá em horário comercial."
+    )
     teclado = InlineKeyboardMarkup([
         [InlineKeyboardButton("🎧 Iniciar Atendimento Interno", callback_data="iniciar_atendimento")],
-        [InlineKeyboardButton("🤖 Bot de Atendimento", url="https://t.me/Atendimento_AlertaSUS_2.0")],
-        [InlineKeyboardButton("📧 Enviar E-mail", url="mailto:suportealertasus@gmail.com")],
+        [InlineKeyboardButton("🤖 Bot de Atendimento", url="https://t.me/SuporteAlertaSUS_bot")],
+        [InlineKeyboardButton("📧 Enviar E-mail", url="mailto:suporte@alertasus.exemplo")],
         [InlineKeyboardButton("📖 Voltar para Ajuda", callback_data="ajuda")],
         [InlineKeyboardButton("❌ Fechar", callback_data="fechar_menu")],
     ])
@@ -323,7 +334,6 @@ async def callback_botoes_canal(update: Update, context: ContextTypes.DEFAULT_TY
     logger.info(f"🔄 Admin {admin_id} clicou em: {data}")
     
     if data.startswith("resp_"):
-        # Admin quer responder
         MODO_RESPOSTA_ADMIN[admin_id] = user_id
         
         await query.message.reply_text(
@@ -335,7 +345,6 @@ async def callback_botoes_canal(update: Update, context: ContextTypes.DEFAULT_TY
         
         logger.info(f"✍️ Admin {admin_id} está respondendo {user_id}")
         
-        # Atualiza o canal mostrando que está sendo respondido
         try:
             await query.edit_message_text(
                 text=query.message.text + "\n\n🔄 <i>Admin está digitando uma resposta...</i>",
@@ -345,11 +354,9 @@ async def callback_botoes_canal(update: Update, context: ContextTypes.DEFAULT_TY
             pass
     
     elif data.startswith("concluir_"):
-        # Admin conclui o chamado
         logger.info(f"✅ Admin {admin_id} concluiu chamado de {user_id}")
         
         async with LOCK_DADOS:
-            # Notifica o usuário
             try:
                 await context.bot.send_message(
                     chat_id=user_id,
@@ -361,13 +368,11 @@ async def callback_botoes_canal(update: Update, context: ContextTypes.DEFAULT_TY
             except Exception as e:
                 logger.warning(f"Não foi possível notificar usuário {user_id}: {e}")
             
-            # Limpa dados
             CHAMADOS_ATIVOS.pop(user_id, None)
             HISTORICO_CONVERSA.pop(user_id, None)
             ULTIMA_MENSAGEM_USUARIO.pop(user_id, None)
             MODO_RESPOSTA_ADMIN.pop(user_id, None)
         
-        # Atualiza mensagem no canal
         try:
             await query.edit_message_text(
                 text=query.message.text + "\n\n<b>[✅ CHAMADO CONCLUÍDO]</b>",
@@ -379,7 +384,6 @@ async def callback_botoes_canal(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 async def cancelar_resposta_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Admin cancela o modo de resposta"""
     admin_id = update.effective_user.id
     MODO_RESPOSTA_ADMIN.pop(admin_id, None)
     await update.message.reply_text("❌ Modo de resposta cancelado.")
@@ -424,7 +428,6 @@ async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
         
     texto = update.message.text
     
-    # CASO 1: Mensagem enviada no CANAL DE SUPORTE (Admin respondendo)
     if chat_id == CANAL_SUPORTE_ID:
         admin_id = user_id
         user_id_destino = MODO_RESPOSTA_ADMIN.get(admin_id)
@@ -439,21 +442,19 @@ async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
             return
         
         try:
-            # Envia a resposta diretamente para o chat privado do usuário
             await context.bot.send_message(
                 chat_id=user_id_destino,
                 text=f"💬 <b>Suporte:</b> {texto}",
                 parse_mode="HTML"
             )
             
-            # Atualiza o histórico de conversas de forma assíncrona e segura
             async with LOCK_DADOS:
                 atualizar_historico(user_id_destino, 'suporte', texto)
                 await atualizar_interface_usuario(context, user_id_destino)
                 try:
                     await atualizar_canal_suporte(context, user_id_destino)
                 except Exception:
-                    pass  # Ignora se a mensagem do canal não mudou visualmente
+                    pass
             
             await update.message.reply_text(f"✅ Resposta enviada com sucesso para o usuário <code>{user_id_destino}</code>!", parse_mode="HTML")
             
@@ -463,7 +464,6 @@ async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
         
         return
     
-    # CASO 2: Mensagem enviada pelo USUÁRIO (Chat privado)
     if user_id not in HISTORICO_CONVERSA:
         await update.message.reply_text(
             "❌ Você não tem um atendimento ativo.\n\n"
