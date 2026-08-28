@@ -30,10 +30,11 @@ PORT = int(os.getenv("PORT", 10000))
 # URL Base do Formulário WebApp no GitHub Pages
 URL_FORMULARIO_PAGES = "https://simpsonpi.github.io/alerta-sus-bot/"
 
-# Contatos e Canais Oficiais do AlertaSUS 2.0
-EMAIL_SUPORTE = "suporte@alertasus.exemplo"
-BOT_SUPORTE_USERNAME = "@SuporteAlertaSUS_bot"
-BOT_SUPORTE_LINK = "https://t.me/SuporteAlertaSUS_bot"
+# ==================== CONTATOS E CANAIS OFICIAIS DO ALERTASUS ====================
+# ATUALIZADO com os novos contatos
+EMAIL_SUPORTE = "suportealertasus@gmail.com"
+BOT_SUPORTE_USERNAME = "@Atendimento_AlertaSUS_2.0"
+BOT_SUPORTE_LINK = "https://t.me/Atendimento_AlertaSUS_2.0"
 
 # ==================== VALIDAÇÃO DAS VARIÁVEIS OBRIGATÓRIAS ====================
 
