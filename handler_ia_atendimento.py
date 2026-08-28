@@ -2,6 +2,8 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 
+from config import EMAIL_SUPORTE, BOT_SUPORTE_USERNAME, BOT_SUPORTE_LINK
+
 logger = logging.getLogger(__name__)
 
 # Definindo os estados da conversação
@@ -24,11 +26,13 @@ async def iniciar_atendimento(update: Update, context):
 
     texto_boas_vindas = (
         f"Olá, <b>{user_nome}</b>! Seja bem-vindo ao suporte do AlertaSUS 2.0.\n\n"
-        "Para agilizar o seu atendimento, escolha uma das opções abaixo clicando em um dos botões:"
+        "Para agilizar o seu atendimento, escolha uma das opções abaixo clicando em um dos botões:\n\n"
+        f"📧 <b>E-mail:</b> <a href=\"mailto:{EMAIL_SUPORTE}\">{EMAIL_SUPORTE}</a>\n"
+        f"🤖 <b>Atendimento:</b> <a href=\"{BOT_SUPORTE_LINK}\">{BOT_SUPORTE_USERNAME}</a>"
     )
 
     if update.message:
-        await update.message.reply_text(texto_boas_vindas, reply_markup=reply_markup, parse_mode="HTML")
+        await update.message.reply_text(texto_boas_vindas, reply_markup=reply_markup, parse_mode="HTML", disable_web_page_preview=True)
     
     return MENU_PRINCIPAL
 
@@ -57,7 +61,8 @@ async def tratar_escolha_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     elif dados == "opcao_3":
         resposta = (
             "📌 <b>Problemas de acesso:</b>\n\n"
-            "Caso esteja com falhas para entrar, tente redefinir sua senha na tela de login ou limpe os dados de navegação do seu aplicativo."
+            "Caso esteja com falhas para entrar, tente redefinir sua senha na tela de login ou limpe os dados de navegação do seu aplicativo.\n\n"
+            f"Se persistir, contate-nos via e-mail: <a href=\"mailto:{EMAIL_SUPORTE}\">{EMAIL_SUPORTE}</a>"
         )
     elif dados == "voltar_menu":
         return await iniciar_atendimento_callback(query)
@@ -73,7 +78,7 @@ async def tratar_escolha_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         resposta = "Opção inválida."
 
-    await query.edit_message_text(text=resposta, reply_markup=reply_markup, parse_mode="HTML")
+    await query.edit_message_text(text=resposta, reply_markup=reply_markup, parse_mode="HTML", disable_web_page_preview=True)
     return MENU_PRINCIPAL
 
 async def iniciar_atendimento_callback(query):
