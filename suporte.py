@@ -223,7 +223,9 @@ async def menu_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Menu principal de suporte"""
     texto = "🎧 <b>Central de Suporte</b>\n\nEscolha uma opção:"
     teclado = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎧 Iniciar Atendimento", callback_data="iniciar_atendimento")],
+        [InlineKeyboardButton("🎧 Iniciar Atendimento Interno", callback_data="iniciar_atendimento")],
+        [InlineKeyboardButton("🤖 Bot de Atendimento", url="https://t.me/Atendimento_AlertaSUS_2.0")],
+        [InlineKeyboardButton("📧 Enviar E-mail", url="mailto:suportealertasus@gmail.com")],
         [InlineKeyboardButton("📖 Voltar para Ajuda", callback_data="ajuda")],
         [InlineKeyboardButton("❌ Fechar", callback_data="fechar_menu")],
     ])
