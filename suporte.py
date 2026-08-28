@@ -515,6 +515,7 @@ def obter_rodape_alerta() -> str:
 # ==================== HANDLERS ====================
 
 handlers = [
+    handlers = [
     # Comandos
     CommandHandler("start", start),
     CommandHandler("ajuda", menu_ajuda),
@@ -526,6 +527,22 @@ handlers = [
     CommandHandler("excluir", comando_excluir),
     CommandHandler("planos", comando_planos),
     CommandHandler("privacidade", comando_privacidade),
+    
+    # Callbacks dos menus
+    CallbackQueryHandler(exibir_resposta_faq, pattern="^faq_"),
+    CallbackQueryHandler(iniciar_atendimento, pattern="^iniciar_atendimento$"),
+    CallbackQueryHandler(menu_ajuda, pattern="^ajuda$"),
+    CallbackQueryHandler(menu_suporte, pattern="^ir_para_suporte$"),
+    CallbackQueryHandler(voltar_inicio, pattern="^voltar_inicio$"),  # ← ESTA LINHA É NOVA
+    CallbackQueryHandler(cancelar_atendimento_usuario, pattern="^fechar_menu$"),
+    CallbackQueryHandler(cancelar_atendimento_usuario, pattern="^usuario_sair$"),
+    
+    # Callbacks do canal
+    CallbackQueryHandler(callback_botoes_canal, pattern="^(resp_|concluir_)"),
+    
+    # Handler ÚNICO para mensagens de texto
+    MessageHandler(filters.TEXT & ~filters.COMMAND, processar_mensagem),
+]
     
     # Callbacks dos menus
     CallbackQueryHandler(exibir_resposta_faq, pattern="^faq_"),
