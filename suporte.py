@@ -181,6 +181,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando /start atualizado com canal de suporte e e-mail oficial"""
     texto = (
         "🤖 <b>Bem-vindo ao AlertaSUS 2.0!</b>\n\n"
+        "Este bot monitora e envia informações atualizadas sobre dados de saúde e pesquisas.\n\n"
         "Escolha uma opção abaixo:\n\n"
         "📧 <b>Suporte Oficial:</b> suporte@alertasus.exemplo\n"
         "🤖 <b>Bot de Atendimento:</b> @SuporteAlertaSUS_bot"
@@ -478,6 +479,19 @@ async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await atualizar_canal_suporte(context, user_id)
         except Exception:
             pass
+
+
+# ==================== FUNÇÃO PARA RODAPÉ DOS ALERTAS ====================
+
+def obter_rodape_alerta() -> str:
+    """Retorna o rodapé padrão para os alertas automáticos"""
+    return (
+        "\n\n━━━━━━━━━━━━━━━━\n"
+        "🔔 <b>AlertaSUS</b> - Monitoramento de Dados de Saúde\n"
+        "📧 <b>Contato:</b> suporte@alertasus.exemplo\n"
+        "🤖 <b>Atendimento:</b> @SuporteAlertaSUS_bot\n"
+        "💡 <i>Reporte falsos positivos ou falhas pelo bot de atendimento</i>"
+    )
 
 
 # ==================== HANDLERS ====================
