@@ -21,7 +21,6 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
-from telegram.request import HTTPXRequest
 
 from config import TELEGRAM_BOT_TOKEN
 from handler import (
@@ -29,7 +28,7 @@ from handler import (
     comando_privacidade,
     comando_verificar_todas,
     comando_ajuda,
-    comando_suporte,
+    # comando_suporte foi removido daqui
     callback_ajuda,
     faq_o_que_e,
     faq_rastrear,
@@ -58,35 +57,29 @@ from handler_admin import (
     comando_remover_cortesia,
 )
 from handler_pagamento import gerar_pagamento_pix
+
+# === IMPORTAÇÃO CORRETA DO SUPORTE ===
+from suporte import menu_suporte 
+
 from utils import (
     SELECIONAR_REGULACAO,
     SELECIONAR_CAMPO,
     AGUARDAR_NOVO_VALOR,
 )
 
-# Configuração de Logs
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
 
-
 async def erro_global_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
-    """Captura exceções de timeout e rede sem derrubar o bot."""
     if isinstance(context.error, (TimedOut, NetworkError)):
-        logger.warning(
-            f"Oscilação de rede com o Telegram capturada: {context.error}"
-        )
+        logger.warning(f"Oscilação de rede com o Telegram capturada: {context.error}")
     else:
-        logger.error(
-            msg="Exceção capturada pelo bot:",
-            exc_info=context.error,
-        )
-
+        logger.error(msg="Exceção capturada pelo bot:", exc_info=context.error)
 
 async def registrar_menu_nativo(app):
-    """Registra todos os comandos no menu nativo do Telegram e força a atualização."""
     comandos = [
         BotCommand("start", "Menu Principal"),
         BotCommand("cadastrar_nova", "Cadastrar Nova Regulação"),
@@ -99,55 +92,32 @@ async def registrar_menu_nativo(app):
         BotCommand("ajuda", "Central de Ajuda e FAQ"),
         BotCommand("suporte", "Falar com o Suporte"),
         BotCommand("admin", "Painel Administrativo"),
-        BotCommand("estatisticas", "Estatísticas do Bot"),
-        BotCommand("ativos", "Assinaturas Ativas"),
-        BotCommand("dar_plano", "Conceder Plano"),
-        BotCommand("bloquear", "Bloquear Usuário"),
-        BotCommand("aviso", "Enviar Aviso em Massa"),
     ]
-
     await app.bot.delete_my_commands(scope=BotCommandScopeAllPrivateChats())
-    await app.bot.set_my_commands(
-        commands=comandos, scope=BotCommandScopeAllPrivateChats()
-    )
-
+    await app.bot.set_my_commands(commands=comandos, scope=BotCommandScopeAllPrivateChats())
 
 def main():
-    # Inicialização limpa e padrão do bot
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-
-    # Adicionando o Handler de Erros Globais
     app.add_error_handler(erro_global_handler)
 
-    # Configuração atualizada do ConversationHandler de Correção
     conv_corrigir = ConversationHandler(
         entry_points=[
             CommandHandler("corrigir", iniciar_corrigir),
             CallbackQueryHandler(selecionar_regulacao_callback, pattern="^corr_reg_")
         ],
         states={
-            SELECIONAR_REGULACAO: [
-                CallbackQueryHandler(selecionar_regulacao_callback, pattern="^corr_reg_")
-            ],
-            SELECIONAR_CAMPO: [
-                CallbackQueryHandler(selecionar_campo_callback, pattern="^corr_campo_")
-            ],
-            AGUARDAR_NOVO_VALOR: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, salvar_novo_valor)
-            ],
+            SELECIONAR_REGULACAO: [CallbackQueryHandler(selecionar_regulacao_callback, pattern="^corr_reg_")],
+            SELECIONAR_CAMPO: [CallbackQueryHandler(selecionar_campo_callback, pattern="^corr_campo_")],
+            AGUARDAR_NOVO_VALOR: [MessageHandler(filters.TEXT & ~filters.COMMAND, salvar_novo_valor)],
         },
-        fallbacks=[
-            CallbackQueryHandler(selecionar_regulacao_callback, pattern="^cancelar_corr$")
-        ],
+        fallbacks=[CallbackQueryHandler(selecionar_regulacao_callback, pattern="^cancelar_corr$")],
     )
 
-    # 1. Registro dos ConversationHandlers (Fluxos em etapas)
     app.add_handler(conv_cadastro)
     app.add_handler(conv_consulta_especifica)
     app.add_handler(conv_corrigir)
     app.add_handler(conv_excluir)
 
-    # 2. Comandos Principais
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("iniciar", start))
     app.add_handler(CommandHandler("cadastrar_nova", iniciar_cadastro_manual))
@@ -158,18 +128,11 @@ def main():
     app.add_handler(CommandHandler("planos", comando_planos))
     app.add_handler(CommandHandler("privacidade", comando_privacidade))
     app.add_handler(CommandHandler("ajuda", comando_ajuda))
-    app.add_handler(CommandHandler("suporte", comando_suporte))
+    
+    # === REGISTRO ATUALIZADO DO SUPORTE ===
+    app.add_handler(CommandHandler("suporte", menu_suporte))
 
-    # 3. Comandos Administrativos
-    app.add_handler(
-        CommandHandler("conceder_cortesia", comando_conceder_cortesia)
-    )
-    app.add_handler(CommandHandler("cortesia", comando_conceder_cortesia))
-    app.add_handler(CommandHandler("conceder", comando_conceder_cortesia))
-    app.add_handler(
-        CommandHandler("remover_cortesia", comando_remover_cortesia)
-    )
-    app.add_handler(CommandHandler("remover", comando_remover_cortesia))
+    app.add_handler(CommandHandler("conceder_cortesia", comando_conceder_cortesia))
     app.add_handler(CommandHandler("admin", comando_menu_admin))
     app.add_handler(CommandHandler("estatisticas", comando_estatisticas))
     app.add_handler(CommandHandler("ativos", comando_listar_ativos))
@@ -177,13 +140,9 @@ def main():
     app.add_handler(CommandHandler("dar_plano", comando_dar_plano))
     app.add_handler(CommandHandler("bloquear", comando_bloquear))
     app.add_handler(CommandHandler("aviso", comando_aviso))
-    app.add_handler(CommandHandler("menu", comando_menu_admin))
 
-    # 4. Callbacks de Botões Inline
     app.add_handler(CallbackQueryHandler(detalhar_plano, pattern="^plano_"))
-    app.add_handler(
-        CallbackQueryHandler(gerar_pagamento_pix, pattern="^pix_")
-    )
+    app.add_handler(CallbackQueryHandler(gerar_pagamento_pix, pattern="^pix_"))
     app.add_handler(CallbackQueryHandler(comando_planos, pattern="^planos$"))
     app.add_handler(CallbackQueryHandler(start, pattern="^iniciar$"))
     app.add_handler(CallbackQueryHandler(callback_faq_suporte, pattern="^abrir_faq_suporte$"))
@@ -194,21 +153,11 @@ def main():
     app.add_handler(CallbackQueryHandler(faq_seguranca, pattern="^faq_seguranca$"))
     app.add_handler(CallbackQueryHandler(faq_corrigir, pattern="^faq_corrigir$"))
     app.add_handler(CallbackQueryHandler(voltar_ajuda, pattern="^voltar_ajuda$"))
-    app.add_handler(
-        CallbackQueryHandler(
-            comando_verificar_todas, pattern="^verificar_todos$"
-        )
-    )
-    app.add_handler(
-        CallbackQueryHandler(
-            comando_privacidade, pattern="^privacidade$"
-        )
-    )
+    app.add_handler(CallbackQueryHandler(comando_verificar_todas, pattern="^verificar_todos$"))
+    app.add_handler(CallbackQueryHandler(comando_privacidade, pattern="^privacidade$"))
 
-    # 5. Inicialização e Execução do Bot
     logger.info("Iniciando o bot AlertaSUS...")
     app.run_polling()
-
 
 if __name__ == "__main__":
     main()
