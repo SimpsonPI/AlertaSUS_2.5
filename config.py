@@ -6,7 +6,10 @@ from zoneinfo import ZoneInfo
 # Carrega o .env se existir localmente (no seu PC), mas ignora se não achar (no Railway)
 load_dotenv()
 
+# Tokens e Credenciais Principais isolados
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_TOKEN_SUPORTE = os.getenv("TELEGRAM_TOKEN_SUPORTE")
+
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
@@ -31,19 +34,14 @@ PORT = int(os.getenv("PORT", 10000))
 URL_FORMULARIO_PAGES = "https://simpsonpi.github.io/alerta-sus-bot/"
 
 # ==================== CONTATOS E CANAIS OFICIAIS DO ALERTASUS ====================
-# ATUALIZADO com os novos contatos
 EMAIL_SUPORTE = "suportealertasus@gmail.com"
 BOT_SUPORTE_USERNAME = "@Atendimento_AlertaSUS_2.0"
 BOT_SUPORTE_LINK = "https://t.me/Atendimento_AlertaSUS_2.0"
 
 # ==================== VALIDAÇÃO DAS VARIÁVEIS OBRIGATÓRIAS ====================
 
-# No final do seu config.py, mude a verificação para ignorar se faltar o token principal caso seja o suporte:
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise ValueError("⚠️ ERRO CRÍTICO: Variáveis SUPABASE_URL ou SUPABASE_KEY não configuradas no arquivo .env!")
-
-# O token do Telegram passa a ser opcional aqui para evitar travar o serviço de suporte
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 # ==================== CLIENTE SUPABASE ====================
 
@@ -59,15 +57,11 @@ MAIN_LOOP = None
 
 # ==================== CONFIGURAÇÕES DO BOT DE SUPORTE ====================
 
-# Token do bot de suporte (deve estar no arquivo .env)
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-
 # ID do canal de suporte no Telegram
 CANAL_SUPORTE_ID = -1004479965268
 
 # ==================== ESTADOS DO CONVERSATIONHANDLER ====================
 
-# Estados principais do fluxo de atendimento
 MENU_PRINCIPAL = 0              # Menu inicial com FAQ e opções
 AGUARDANDO_MENSAGEM = 1         # Aguardando mensagem do usuário
 AGUARDANDO_RESPOSTA_ADMIN = 2   # Aguardando resposta do administrador
@@ -75,12 +69,10 @@ AGUARDANDO_FAQ = 3              # Navegando pelo FAQ
 
 # ==================== MENSAGENS DO SISTEMA ====================
 
-# Mensagens de confirmação e status
 MSG_RESPOSTA_ENVIADA = "✅ Resposta enviada com sucesso para o usuário!"
 MSG_ATENDIMENTO_ENCERRADO = "❌ Atendimento encerrado. Se precisar de algo, acesse o menu novamente!"
 MSG_MODAL_RESPOSTA = "✍️ <b>Modo de Resposta Ativado</b> para o ID: <code>{user_id}</code>\n\nDigite a mensagem que deseja enviar para este usuário agora:"
 
-# Mensagens de boas-vindas e menu
 MSG_BOAS_VINDAS = (
     "🤖 <b>Central de Atendimento ao Usuário AlertaSUS 2.0</b>\n\n"
     "Seja bem-vindo(a)! Como posso ajudá-lo hoje?\n\n"
@@ -107,7 +99,6 @@ MSG_ATENDIMENTO_INICIADO = (
     "✏️ <i>Digite sua mensagem agora...</i>"
 )
 
-# Rodapé padrão para alertas automáticos do sistema
 RODAPE_ALERTAS = (
     f"\n\n━━━━━━━━━━━━━━━━━━━━\n"
     f"📧 E-mail: {EMAIL_SUPORTE}\n"
@@ -116,15 +107,11 @@ RODAPE_ALERTAS = (
 
 # ==================== CONFIGURAÇÕES DE SEGURANÇA ====================
 
-# Tempo máximo de inatividade (em segundos) antes de encerrar um chamado
 TIMEOUT_ATENDIMENTO = 3600  # 1 hora
-
-# Número máximo de tentativas de envio de mensagem
 MAX_TENTATIVAS_ENVIO = 3
 
 # ==================== CONFIGURAÇÕES DO BANCO DE DADOS ====================
 
-# Nomes das tabelas no Supabase
 TABELA_USUARIOS = "usuarios"
 TABELA_REGULACOES = "regulacoes"
 TABELA_CHAMADOS = "chamados_suporte"
@@ -133,59 +120,34 @@ TABELA_HISTORICO = "historico_atendimento"
 # ==================== FUNÇÕES AUXILIARES ====================
 
 def is_admin(user_id: int) -> bool:
-    """
-    Verifica se um usuário é administrador
-    
-    Args:
-        user_id: ID do usuário do Telegram
-        
-    Returns:
-        bool: True se for administrador, False caso contrário
-    """
+    """Verifica se um usuário é administrador."""
     return user_id in ADMIN_IDS or user_id == ADMIN_CHAT_ID
 
 def get_fuso_horario():
-    """
-    Retorna o fuso horário configurado
-    
-    Returns:
-        ZoneInfo: Objeto ZoneInfo com o fuso horário
-    """
+    """Retorna o fuso horário configurado."""
     return FUSO_HORARIO
 
 def get_supabase_client() -> Client:
-    """
-    Retorna o cliente Supabase configurado
-    
-    Returns:
-        Client: Cliente Supabase
-    """
+    """Retorna o cliente Supabase configurado."""
     return supabase
 
 # ==================== VALIDAÇÃO ADICIONAL ====================
 
-# Verifica se o token do bot de suporte está configurado
 if not TELEGRAM_BOT_TOKEN:
-    print("⚠️ AVISO: TELEGRAM_BOT_TOKEN não configurado. O bot de suporte pode não funcionar.")
+    print("⚠️ AVISO: TELEGRAM_BOT_TOKEN não configurado. O bot principal pode não funcionar.")
 
-# Verifica se o ID do canal é válido
 if CANAL_SUPORTE_ID >= 0:
     print("⚠️ AVISO: CANAL_SUPORTE_ID parece ser um ID de grupo positivo. Certifique-se de que é um ID de canal/chat válido.")
 
 # ==================== EXPORTAÇÕES ====================
 
-# Lista de todas as variáveis exportadas para facilitar a importação
 __all__ = [
-    # Configurações principais
     'SUPABASE_URL',
     'SUPABASE_KEY',
     'TELEGRAM_BOT_TOKEN',
-    
-    # IDs de administração
+    'TELEGRAM_TOKEN_SUPORTE',
     'ADMIN_CHAT_ID',
     'ADMIN_IDS',
-    
-    # Configurações de API e servidor
     'SCRAPER_KEY',
     'PORT',
     'URL_FORMULARIO_PAGES',
@@ -193,45 +155,28 @@ __all__ = [
     'BOT_SUPORTE_USERNAME',
     'BOT_SUPORTE_LINK',
     'RODAPE_ALERTAS',
-    
-    # Cliente Supabase
     'supabase',
-    
-    # Configurações globais
     'FUSO_HORARIO',
     'URL_BUSCA_FMS',
     'BOT_APP',
     'MAIN_LOOP',
-    
-    # Configurações do bot de suporte
-    'TELEGRAM_BOT_TOKEN',
     'CANAL_SUPORTE_ID',
-    
-    # Estados do ConversationHandler
     'MENU_PRINCIPAL',
     'AGUARDANDO_MENSAGEM',
     'AGUARDANDO_RESPOSTA_ADMIN',
     'AGUARDANDO_FAQ',
-    
-    # Mensagens do sistema
     'MSG_RESPOSTA_ENVIADA',
     'MSG_ATENDIMENTO_ENCERRADO',
     'MSG_MODAL_RESPOSTA',
     'MSG_BOAS_VINDAS',
     'MSG_SUPORTE_INICIAL',
     'MSG_ATENDIMENTO_INICIADO',
-    
-    # Configurações de segurança
     'TIMEOUT_ATENDIMENTO',
     'MAX_TENTATIVAS_ENVIO',
-    
-    # Configurações do banco de dados
     'TABELA_USUARIOS',
     'TABELA_REGULACOES',
     'TABELA_CHAMADOS',
     'TABELA_HISTORICO',
-    
-    # Funções auxiliares
     'is_admin',
     'get_fuso_horario',
     'get_supabase_client',
