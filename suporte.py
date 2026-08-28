@@ -194,7 +194,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def menu_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Menu de ajuda com FAQ"""
     texto = (
-        "🤖 <b>Central de Atendimento AlertaSUS 2.0</b>\n\n"
+        "🤖 <b>Central de Atendimento / Ajuda AlertaSUS 2.0</b>\n\n"
         "Selecione uma opção:\n\n"
         "1️⃣ Como cadastrar regulação?\n"
         "2️⃣ Como consultar regulações?\n"
