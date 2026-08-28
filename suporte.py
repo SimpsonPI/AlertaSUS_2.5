@@ -291,95 +291,6 @@ async def iniciar_atendimento(update: Update, context: ContextTypes.DEFAULT_TYPE
     await atualizar_canal_suporte(context, user_id)
 
 
-async def receber_mensagem_usuario(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Recebe mensagem do usuário (APENAS de chats privados)"""
-    user_id = update.effective_user.id
-    chat_id = update.effective_chat.id
-    
-    # IGNORA mensagens do canal/grupo
-    if chat_id == CANAL_SUPORTE_ID:
-        return
-    
-    texto = update.message.text
-    
-    logger.info(f"📩 Usuário {user_id} (chat {chat_id}): {texto}")
-    
-    # Verifica se o usuário está em atendimento
-    if user_id not in HISTORICO_CONVERSA:
-        await update.message.reply_text(
-            "❌ Você não tem um atendimento ativo.\n\n"
-            "Use /start para iniciar um novo atendimento."
-        )
-        return
-    
-    async with LOCK_DADOS:
-        atualizar_historico(user_id, 'usuario', texto)
-        await atualizar_interface_usuario(context, user_id)
-        await atualizar_canal_suporte(context, user_id)
-
-
-async def receber_resposta_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Recebe a resposta do admin (APENAS do canal)"""
-    admin_id = update.effective_user.id
-    chat_id = update.effective_chat.id
-    resposta = update.message.text
-    
-    # SÓ processa mensagens do canal
-    if chat_id != CANAL_SUPORTE_ID:
-        return
-    
-    logger.info(f"📤 Admin {admin_id} no canal: {resposta}")
-    
-    user_id = MODO_RESPOSTA_ADMIN.get(admin_id)
-    
-    if not user_id:
-        # Se não está em modo resposta, ignora a mensagem
-        logger.info(f"⚠️ Admin {admin_id} não está em modo resposta")
-        return
-    
-    # Verifica se o chamado ainda está ativo
-    if user_id not in HISTORICO_CONVERSA:
-        await update.message.reply_text(
-            f"❌ O chamado do usuário {user_id} já foi encerrado."
-        )
-        MODO_RESPOSTA_ADMIN.pop(admin_id, None)
-        return
-    
-    logger.info(f"📤 Admin {admin_id} enviando para {user_id}: {resposta}")
-    
-    try:
-        # ENVIA A RESPOSTA PARA O USUÁRIO
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=f"💬 <b>Suporte:</b> {resposta}",
-            parse_mode="HTML"
-        )
-        
-        # Atualiza o histórico
-        async with LOCK_DADOS:
-            atualizar_historico(user_id, 'suporte', resposta)
-            await atualizar_interface_usuario(context, user_id)
-            await atualizar_canal_suporte(context, user_id)
-        
-        # Confirma para o admin (no canal)
-        await update.message.reply_text(
-            f"✅ Resposta enviada para <code>{user_id}</code>!\n\n"
-            f"📝 Sua mensagem: {resposta}",
-            parse_mode="HTML"
-        )
-        
-        logger.info(f"✅ Resposta de {admin_id} entregue para {user_id}")
-        
-    except Exception as e:
-        await update.message.reply_text(f"❌ Erro ao enviar: {e}")
-        logger.error(f"Erro ao enviar resposta do admin {admin_id}: {e}")
-    
-    async with LOCK_DADOS:
-        atualizar_historico(user_id, 'usuario', texto)
-        await atualizar_interface_usuario(context, user_id)
-        await atualizar_canal_suporte(context, user_id)
-
-
 async def cancelar_atendimento_usuario(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Usuário cancela o atendimento"""
     user_id = update.effective_user.id
@@ -467,95 +378,11 @@ async def callback_botoes_canal(update: Update, context: ContextTypes.DEFAULT_TY
             pass
 
 
-async def receber_resposta_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Recebe a resposta do admin e envia para o usuário"""
-    admin_id = update.effective_user.id
-    resposta = update.message.text
-    user_id = MODO_RESPOSTA_ADMIN.get(admin_id)
-    
-    logger.info(f"📤 Admin {admin_id} respondeu: {resposta}")
-    
-    if not user_id:
-        await update.message.reply_text(
-            "❌ Você não está em modo de resposta.\n\n"
-            "Clique em 'Responder Usuário' no canal para ativar."
-        )
-        return
-    
-    # Verifica se o chamado ainda está ativo
-    if user_id not in HISTORICO_CONVERSA:
-        await update.message.reply_text(
-            f"❌ O chamado do usuário {user_id} já foi encerrado."
-        )
-        MODO_RESPOSTA_ADMIN.pop(admin_id, None)
-        return
-    
-    logger.info(f"📤 Admin {admin_id} enviando para {user_id}: {resposta}")
-    
-    try:
-        # ENVIA A RESPOSTA PARA O USUÁRIO
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=f"💬 <b>Suporte:</b> {resposta}",
-            parse_mode="HTML"
-        )
-        
-        # Atualiza o histórico
-        async with LOCK_DADOS:
-            atualizar_historico(user_id, 'suporte', resposta)
-            await atualizar_interface_usuario(context, user_id)
-            await atualizar_canal_suporte(context, user_id)
-        
-        # Confirma para o admin
-        await update.message.reply_text(
-            f"✅ Resposta enviada para <code>{user_id}</code>!\n\n"
-            f"📝 Sua mensagem: {resposta}",
-            parse_mode="HTML"
-        )
-        
-        logger.info(f"✅ Resposta de {admin_id} entregue para {user_id}")
-        
-    except Exception as e:
-        await update.message.reply_text(f"❌ Erro ao enviar: {e}")
-        logger.error(f"Erro ao enviar resposta do admin {admin_id}: {e}")
-
-
 async def cancelar_resposta_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin cancela o modo de resposta"""
     admin_id = update.effective_user.id
     MODO_RESPOSTA_ADMIN.pop(admin_id, None)
     await update.message.reply_text("❌ Modo de resposta cancelado.")
-
-async def enviar_resposta_para_usuario(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Captura a mensagem enviada pelo administrador no canal de suporte 
-    e a encaminha para o chat privado do usuário que abriu o chamado.
-    """
-    # Verifica se o admin está em estado de resposta e qual é o ID do usuário alvo
-    user_id_alvo = context.user_data.get("admin_respondendo_para")
-    
-    if not user_id_alvo:
-        # Se não houver usuário selecionado, ignora ou avisa
-        return
-
-    mensagem_admin = update.message.text
-
-    try:
-        # Envia a mensagem de fato para o chat privado do usuário
-        await context.bot.send_message(
-            chat_id=user_id_alvo,
-            text=f"🎧 **Suporte:**\n\n{mensagem_admin}",
-            parse_mode="Markdown"
-        )
-        
-        # Confirma ao admin no canal que foi enviado
-        await update.message.reply_text("✅ Mensagem enviada para o usuário com sucesso!")
-        
-        # Opcional: limpar o estado ou manter para continuar conversando
-        # context.user_data.pop("admin_respondendo_para", None)
-        
-    except Exception as e:
-        await update.message.reply_text(f"❌ Erro ao enviar mensagem para o usuário: {e}")
 
 
 # ==================== COMANDOS AUXILIARES ====================
@@ -581,6 +408,8 @@ async def comando_planos(update, context):
 async def comando_privacidade(update, context):
     await update.message.reply_text("🔒 Política de Privacidade no bot principal", parse_mode="HTML")
 
+
+# ==================== PROCESSAMENTO DE MENSAGENS ====================
 
 async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Processa TODAS as mensagens de texto (usuário E admin) de forma unificada"""
@@ -678,7 +507,5 @@ handlers = [
     CallbackQueryHandler(callback_botoes_canal, pattern="^(resp_|concluir_)"),
     
     # Handler ÚNICO para mensagens de texto
-    MessageHandler(filters.TEXT & ~filters.COMMAND, processar_mensagem),  # <-- AGORA processar_mensagem ESTÁ DEFINIDA
+    MessageHandler(filters.TEXT & ~filters.COMMAND, processar_mensagem),
 ]
-# ==================== HANDLERS (para registrar no bot_suporte.py) ====================
-
