@@ -30,6 +30,11 @@ PORT = int(os.getenv("PORT", 10000))
 # URL Base do Formulário WebApp no GitHub Pages
 URL_FORMULARIO_PAGES = "https://simpsonpi.github.io/alerta-sus-bot/"
 
+# Contatos e Canais Oficiais do AlertaSUS 2.0
+EMAIL_SUPORTE = "suporte@alertasus.exemplo"
+BOT_SUPORTE_USERNAME = "@SuporteAlertaSUS_bot"
+BOT_SUPORTE_LINK = "https://t.me/SuporteAlertaSUS_bot"
+
 # ==================== VALIDAÇÃO DAS VARIÁVEIS OBRIGATÓRIAS ====================
 
 # No final do seu config.py, mude a verificação para ignorar se faltar o token principal caso seja o suporte:
@@ -82,18 +87,30 @@ MSG_BOAS_VINDAS = (
     "• /ajuda - Perguntas Frequentes (FAQ)\n"
     "• /suporte - Falar com a equipe de suporte\n"
     "• /planos - Gerenciar planos e assinatura\n"
-    "• /privacidade - Política de privacidade"
+    "• /privacidade - Política de privacidade\n\n"
+    f"📧 <b>E-mail Oficial:</b> {EMAIL_SUPORTE}\n"
+    f"🤖 <b>Bot de Atendimento:</b> {BOT_SUPORTE_USERNAME}"
 )
 
 MSG_SUPORTE_INICIAL = (
-    "🎧 <b>Central de Suporte e Atendimento AlertaSUS 2.0</b>\n\n"
-    "Escolha uma opção abaixo para começar:"
+    "🛠️ <b>Canais de Atendimento</b>\n\n"
+    "Precisa de auxílio ou deseja reportar um problema?\n"
+    f"• <b>E-mail:</b> <code>{EMAIL_SUPORTE}</code>\n"
+    f"• <b>Telegram:</b> {BOT_SUPORTE_USERNAME}\n\n"
+    "Nossa equipe responderá em horário comercial."
 )
 
 MSG_ATENDIMENTO_INICIADO = (
     "🎧 <b>Atendimento Personalizado AlertaSUS</b>\n\n"
     "Olá! Escreva abaixo a sua dúvida ou demanda para que nossa equipe receba por aqui:\n\n"
     "✏️ <i>Digite sua mensagem agora...</i>"
+)
+
+# Rodapé padrão para alertas automáticos do sistema
+RODAPE_ALERTAS = (
+    f"\n\n━━━━━━━━━━━━━━━━━━━━\n"
+    f"📧 E-mail: {EMAIL_SUPORTE}\n"
+    f"🤖 Atendimento: {BOT_SUPORTE_LINK}"
 )
 
 # ==================== CONFIGURAÇÕES DE SEGURANÇA ====================
@@ -171,6 +188,10 @@ __all__ = [
     'SCRAPER_KEY',
     'PORT',
     'URL_FORMULARIO_PAGES',
+    'EMAIL_SUPORTE',
+    'BOT_SUPORTE_USERNAME',
+    'BOT_SUPORTE_LINK',
+    'RODAPE_ALERTAS',
     
     # Cliente Supabase
     'supabase',
