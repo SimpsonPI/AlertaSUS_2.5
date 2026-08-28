@@ -232,8 +232,8 @@ async def menu_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🛠️ <b>Central de Suporte</b>\n\n"
         "Precisa de ajuda humana ou encontrou algum problema crítico?\n"
         "Entre em contato conosco pelos canais oficiais abaixo:\n\n"
-        f"📧 <b>E-mail:</b> <code>{EMAIL_SUPORTE}</code>\n"
-        f"🤖 <b>Bot de Atendimento:</b> {BOT_SUPORTE_USERNAME}\n\n"
+        f"📧 <b>E-mail:</b> <a href=\"mailto:{EMAIL_SUPORTE}\">{EMAIL_SUPORTE}</a>\n"
+        f"🤖 <b>Bot de Atendimento:</b> <a href=\"{BOT_SUPORTE_LINK}\">{BOT_SUPORTE_USERNAME}</a>\n\n"
         "Nossa equipe responderá em horário comercial."
     )
     teclado = InlineKeyboardMarkup([
@@ -245,9 +245,9 @@ async def menu_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if update.callback_query:
         await update.callback_query.answer()
-        await update.callback_query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
+        await update.callback_query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado, disable_web_page_preview=True)
     else:
-        await update.message.reply_text(texto, parse_mode="HTML", reply_markup=teclado)
+        await update.message.reply_text(texto, parse_mode="HTML", reply_markup=teclado, disable_web_page_preview=True)
 
 
 async def exibir_resposta_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
