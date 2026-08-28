@@ -181,24 +181,22 @@ async def atualizar_canal_suporte(context, user_id: int):
 # ==================== MENUS ====================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Comando /start atualizado com canal de suporte e e-mail oficial"""
+    """Comando /start - Menu inicial com botão para suporte"""
     texto = (
         "🤖 <b>Bem-vindo ao AlertaSUS 2.0!</b>\n\n"
         "Este bot monitora e envia informações atualizadas sobre dados de saúde e pesquisas.\n\n"
-        "Escolha uma opção abaixo:\n\n"
-        f"📧 <b>Suporte Oficial:</b> {EMAIL_SUPORTE}\n"
-        f"🤖 <b>Bot de Atendimento:</b> {BOT_SUPORTE_USERNAME}"
+        "Escolha uma opção abaixo:"
     )
     teclado = InlineKeyboardMarkup([
         [InlineKeyboardButton("📖 Ajuda / FAQ", callback_data="ajuda")],
-        [InlineKeyboardButton("🎧 Falar com Suporte", callback_data="ir_para_suporte")],
+        [InlineKeyboardButton("🎧 Falar com Suporte", callback_data="ir_para_suporte")],  # ← CHAMA CENTRAL DE SUPORTE
     ])
     
     await update.message.reply_text(texto, parse_mode="HTML", reply_markup=teclado)
 
 
 async def menu_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Menu de ajuda com FAQ e textos prontos solicitados"""
+    """Menu de ajuda com FAQ - botão para falar com suporte"""
     texto = (
         "🤖 <b>Central de Ajuda - AlertaSUS</b>\n\n"
         "Este bot monitora e envia informações atualizadas sobre dados de saúde e pesquisas.\n\n"
@@ -217,7 +215,7 @@ async def menu_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("3️⃣ Cartão SUS/ID", callback_data="faq_id"),
          InlineKeyboardButton("4️⃣ Alterar Dados", callback_data="faq_alterar")],
         [InlineKeyboardButton("5️⃣ Planos", callback_data="faq_planos")],
-        [InlineKeyboardButton("💬 Falar com Suporte", callback_data="ir_para_suporte")],
+        [InlineKeyboardButton("💬 Falar com Suporte", callback_data="ir_para_suporte")],  # ← CHAMA CENTRAL DE SUPORTE
         [InlineKeyboardButton("❌ Fechar", callback_data="fechar_menu")],
     ])
     
@@ -229,19 +227,20 @@ async def menu_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def menu_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Menu principal de suporte integrado com os canais e horários"""
+    """Central de Suporte - Exibe os canais de atendimento (E-mail e Bot)"""
     texto = (
         "🛠️ <b>Central de Suporte</b>\n\n"
         "Precisa de ajuda humana ou encontrou algum problema crítico?\n"
-        "Entre em contato conosco pelos canais oficiais ou utilize o menu de ajuda abaixo.\n\n"
+        "Entre em contato conosco pelos canais oficiais abaixo:\n\n"
         f"📧 <b>E-mail:</b> <code>{EMAIL_SUPORTE}</code>\n"
-        f"🤖 <b>Bot de Atendimento:</b> {BOT_SUPORTE_USERNAME}"
+        f"🤖 <b>Bot de Atendimento:</b> {BOT_SUPORTE_USERNAME}\n\n"
+        "Nossa equipe responderá em horário comercial."
     )
     teclado = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📖 Ver Perguntas Frequentes (FAQ)", callback_data="ajuda")],
-        [InlineKeyboardButton("🏠 Voltar ao Início", callback_data="voltar_inicio")],
         [InlineKeyboardButton("📧 Enviar E-mail", url=f"mailto:{EMAIL_SUPORTE}")],
         [InlineKeyboardButton("🤖 Abrir Bot de Atendimento", url=BOT_SUPORTE_LINK)],
+        [InlineKeyboardButton("📖 Ver Perguntas Frequentes (FAQ)", callback_data="ajuda")],
+        [InlineKeyboardButton("🏠 Voltar ao Início", callback_data="voltar_inicio")],
     ])
     
     if update.callback_query:
@@ -283,9 +282,7 @@ async def voltar_inicio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     texto = (
         "🤖 <b>Bem-vindo ao AlertaSUS 2.0!</b>\n\n"
         "Este bot monitora e envia informações atualizadas sobre dados de saúde e pesquisas.\n\n"
-        "Escolha uma opção abaixo:\n\n"
-        f"📧 <b>Suporte Oficial:</b> {EMAIL_SUPORTE}\n"
-        f"🤖 <b>Bot de Atendimento:</b> {BOT_SUPORTE_USERNAME}"
+        "Escolha uma opção abaixo:"
     )
     teclado = InlineKeyboardMarkup([
         [InlineKeyboardButton("📖 Ajuda / FAQ", callback_data="ajuda")],
@@ -298,7 +295,7 @@ async def voltar_inicio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==================== FLUXO DO USUÁRIO ====================
 
 async def iniciar_atendimento(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Inicia o atendimento personalizado"""
+    """Inicia o atendimento personalizado (chat interno)"""
     query = update.callback_query
     await query.answer()
     user_id = update.effective_user.id
@@ -535,7 +532,7 @@ handlers = [
     CallbackQueryHandler(exibir_resposta_faq, pattern="^faq_"),
     CallbackQueryHandler(iniciar_atendimento, pattern="^iniciar_atendimento$"),
     CallbackQueryHandler(menu_ajuda, pattern="^ajuda$"),
-    CallbackQueryHandler(menu_suporte, pattern="^ir_para_suporte$"),
+    CallbackQueryHandler(menu_suporte, pattern="^ir_para_suporte$"),  # ← "🎧 Falar com Suporte" chama Central de Suporte
     CallbackQueryHandler(voltar_inicio, pattern="^voltar_inicio$"),
     CallbackQueryHandler(cancelar_atendimento_usuario, pattern="^fechar_menu$"),
     CallbackQueryHandler(cancelar_atendimento_usuario, pattern="^usuario_sair$"),
