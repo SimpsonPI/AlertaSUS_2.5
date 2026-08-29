@@ -200,8 +200,8 @@ async def obter_menu_planos(user_id: int) -> InlineKeyboardMarkup:
     keyboard = []
     if not ja_usou_degustacao:
         keyboard.append([InlineKeyboardButton("🎁 Plano Degustação (Grátis)", callback_data="plano_degustacao")])
-    keyboard.append([InlineKeyboardButton("⭐ Plano Semestral (R$ 9,99)", callback_data="plano_semestral")])
-    keyboard.append([InlineKeyboardButton("🚀 Plano Anual (R$ 14,99)", callback_data="plano_anual")])
+    keyboard.append([InlineKeyboardButton("⭐ Plano Trimestral (R$ 9,99)", callback_data="plano_semestral")])
+    keyboard.append([InlineKeyboardButton("🚀 Plano Semestral (R$ 14,99)", callback_data="plano_anual")])
     keyboard.append([InlineKeyboardButton("💬 Falar com Comercial", url="https://wa.me/5586994083113")])
     return InlineKeyboardMarkup(keyboard)
 
