@@ -42,6 +42,12 @@ TECLADO_CANCELAR = ReplyKeyboardMarkup(
     [["🚫 Cancelar Operação"]],
     resize_keyboard=True
 )
+# Formatadores e utilitários
+def formatar_maiusculo(texto: str) -> str:
+    """Converte o texto digitado para letras maiúsculas e remove espaços excedentes."""
+    if not texto:
+        return ""
+    return str(texto).strip().upper()
 
 # Formatadores e utilitários
 def formatar_data(texto: str) -> str:

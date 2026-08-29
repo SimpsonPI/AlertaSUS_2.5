@@ -7,8 +7,38 @@ from utils import (
     DISCLAIMER_TEXTO, TECLADO_MENU, TECLADO_CANCELAR,
     ETAPA_SUS, ETAPA_NOME, ETAPA_CELULAR, ETAPA_NASCIMENTO,
     ETAPA_REGULACAO, ETAPA_CBO, ETAPA_PROCEDIMENTO, ETAPA_LGPD,
-    formatar_data, formatar_celular, verificar_se_e_menu_e_executar
+    formatar_data, formatar_celular, formatar_maiusculo, verificar_se_e_menu_e_executar
 )
+
+async def receber_nome(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if await verificar_se_e_menu_e_executar(update, context): return ConversationHandler.END
+    context.user_data["nome"] = formatar_maiusculo(update.message.text)
+    await update.message.reply_text("Digite o número de <b>celular/WhatsApp</b> (com DDD):", parse_mode="HTML")
+    return ETAPA_CELULAR
+
+async def receber_celular(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if await verificar_se_e_menu_e_executar(update, context): return ConversationHandler.END
+    context.user_data["celular"] = formatar_celular(update.message.text)[cite: 2]
+    await update.message.reply_text("Digite a <b>data de nascimento</b> do paciente (DD/MM/AAAA):", parse_mode="HTML")
+    return ETAPA_NASCIMENTO
+
+async def receber_nascimento(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if await verificar_se_e_menu_e_executar(update, context): return ConversationHandler.END
+    context.user_data["nascimento"] = formatar_data(update.message.text)[cite: 2]
+    await update.message.reply_text("Agora, por favor, digite o <b>Número da Regulação</b>:", parse_mode="HTML")
+    return ETAPA_REGULACAO
+
+async def receber_cbo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if await verificar_se_e_menu_e_executar(update, context): return ConversationHandler.END
+    cbo = update.message.text.strip()
+    context.user_data["cbo"] = formatar_maiusculo(cbo) if cbo != "0" else ""
+    await update.message.reply_text("Qual a descrição do <b>Procedimento/Exame</b>?", parse_mode="HTML")
+    return ETAPA_PROCEDIMENTO
+
+async def receber_procedimento(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if await verificar_se_e_menu_e_executar(update, context): return ConversationHandler.END
+    context.user_data["procedimento"] = formatar_maiusculo(update.message.text)
+    # Restante do código do termo LGPD...
 
 async def iniciar_cadastro_manual(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
