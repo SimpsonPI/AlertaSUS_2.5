@@ -74,7 +74,8 @@ async def erro_global_handler(update: object, context: ContextTypes.DEFAULT_TYPE
     logger.error(msg="Exceção capturada pelo bot:", exc_info=context.error)
 
 def main():
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    token = os.getenv("TELEGRAM_BOT_TOKEN") or "8988706536:AAElQEEH-LouWkLa5YNW_k0isUcUGzm0jps"
+    app = ApplicationBuilder().token(token).build()
     app.add_error_handler(erro_global_handler)
 
     conv_corrigir = ConversationHandler(
@@ -122,36 +123,16 @@ def main():
     app.add_handler(CallbackQueryHandler(start, pattern="^iniciar$"))
     app.add_handler(CallbackQueryHandler(callback_faq_suporte, pattern="^abrir_faq_suporte$"))
     app.add_handler(CallbackQueryHandler(callback_privacidade_voltar, pattern="^privacidade_voltar$"))
-    app.add_handler(CallbackQueryHandler(CallbackQueryHandler, pattern="^ajuda$"))
+    app.add_handler(CallbackQueryHandler(voltar_ajuda, pattern="^ajuda$"))
     app.add_handler(CallbackQueryHandler(faq_o_que_e, pattern="^faq_o_que_e$"))
     app.add_handler(CallbackQueryHandler(faq_rastrear, pattern="^faq_rastrear$"))
     app.add_handler(CallbackQueryHandler(faq_seguranca, pattern="^faq_seguranca$"))
-    app.add_handler(CallbackGroup := CallbackQueryHandler(faq_corrigir, pattern="^faq_corrigir$"))
+    app.add_handler(CallbackQueryHandler(faq_corrigir, pattern="^faq_corrigir$"))
     app.add_handler(CallbackQueryHandler(voltar_ajuda, pattern="^voltar_ajuda$"))
     app.add_handler(CallbackQueryHandler(comando_verificar_todas, pattern="^verificar_todos$"))
     app.add_handler(CallbackQueryHandler(comando_privacidade, pattern="^privacidade$"))
 
-    # Configuração de Webhook para Railway
-    PORT = int(os.environ.get("PORT", "8080"))
-    RAILWAY_STATIC_URL = os.environ.get("RAILWAY_STATIC_URL") or os.environ.get("RAILWAY_PUBLIC_DOMAIN")
-
-    if RAILWAY_STATIC_URL:
-        if not RAILWAY_STATIC_URL.startswith("https://"):
-            webhook_url = f"https://{RAILWAY_STATIC_URL}/{TELEGRAM_BOT_TOKEN}"
-        else:
-            webhook_url = f"{RAILWay_STATIC_URL}/{TELEGRAM_BOT_TOKEN}" if 'RAILWay_STATIC_URL' in locals() else f"{RAILWAY_STATIC_URL}/{TELEGRAM_BOT_TOKEN}"
-            
-        logger.info(f"Iniciando bot via Webhook em porta {PORT} com URL: {webhook_url}")
-        
-        # Inicia o webhook com o servidor embutido do PTB
-    else:
-        logger.error("ERRO CRITICO: Nenhuma URL do Railway encontrada! Verifique as variaveis de ambiente.")
-        app.run_polling(drop_pending_updates=True)
-
-if __name__ == "__main__":
-    main()
-
-    # Bloco final da funcao main()
+    # Servidor HTTP auxiliar para o Railway manter a porta aberta
     PORT = int(os.environ.get("PORT", "8080"))
     
     import threading
@@ -161,7 +142,7 @@ if __name__ == "__main__":
         def do_GET(self):
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(b"Bot AlertaSUS 2.5 is running via Polling!")
+            self.wfile.write(b"Bot AlertaSUS 2.5 is running!")
 
     def run_http_server(port):
         server = HTTPServer(("0.0.0.0", port), SimpleHandler)
