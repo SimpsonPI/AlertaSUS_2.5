@@ -1,7 +1,3 @@
-streamlit
-pandas
+python-telegram-bot[webhooks]
 supabase
-python-telegram-bot
-python-dotenv
-beautifulsoup4
-mercadopago
+requests
