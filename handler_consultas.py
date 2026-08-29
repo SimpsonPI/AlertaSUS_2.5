@@ -229,7 +229,7 @@ async def iniciar_verificar_especifico(update: Update, context: ContextTypes.DEF
 
 
 # Adicione também esta função para processar o clique/digitação da consulta específica com a mensagem de carregamento:
-async def processar_verificacao_especifica(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def processar_verificar_especifico(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     if query:
         await query.answer()
