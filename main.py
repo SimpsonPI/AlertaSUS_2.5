@@ -156,3 +156,28 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    # Bloco final da funcao main()
+    PORT = int(os.environ.get("PORT", "8080"))
+    
+    import threading
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+
+    class SimpleHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"Bot AlertaSUS 2.5 is running via Polling!")
+
+    def run_http_server(port):
+        server = HTTPServer(("0.0.0.0", port), SimpleHandler)
+        server.serve_forever()
+
+    threading.Thread(target=run_http_server, args=(PORT,), daemon=True).start()
+    logger.info(f"Servidor HTTP auxiliar rodando na porta {PORT}")
+
+    logger.info("Iniciando o bot AlertaSUS via polling...")
+    app.run_polling(drop_pending_updates=True)
+
+if __name__ == "__main__":
+    main()
