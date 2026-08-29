@@ -28,6 +28,7 @@ async def receber_sus(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
     try:
         print(f"DEBUG: Buscando SUS {numero_sus} no Supabase...")
+        # Altere "numero_sus" abaixo se a sua coluna no Supabase tiver outro nome (ex: "cartao_sus")
         resposta = supabase.table("AlertaSUS_2.0").select("*").eq("numero_sus", numero_sus).execute()
         registros = resposta.data
 
@@ -36,12 +37,14 @@ async def receber_sus(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
             context.user_data['nome'] = dados_antigos.get('nome_paciente')
             context.user_data['celular'] = dados_antigos.get('celular')
             context.user_data['nascimento'] = dados_antigos.get('data_nascimento')
+            context.user_data['cbo'] = dados_antigos.get('cbo')
+            context.user_data['procedimento'] = dados_antigos.get('procedimento')
 
-            print("DEBUG: SUS encontrado! Indo para ETAPA_REGULACAO.")
+            print("DEBUG: SUS encontrado! Indo direto para ETAPA_REGULACAO.")
             await update.message.reply_text(
                 f"🔍 <b>Cartão do SUS já cadastrado!</b>\n"
                 f"Autopreenchemos os dados de: <b>{dados_antigos.get('nome_paciente')}</b>.\n\n"
-                f"Agora, por favor, digite o <b>Número da Regulação</b>:",
+                f"Agora, por favor, digite apenas o <b>Número da Regulação</b>:",
                 parse_mode="HTML"
             )
             return ETAPA_REGULACAO
