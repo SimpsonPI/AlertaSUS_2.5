@@ -157,7 +157,4 @@ def main():
     app.add_handler(CallbackQueryHandler(comando_privacidade, pattern="^privacidade$"))
 
     logger.info("Iniciando o bot AlertaSUS...")
-    app.run_polling(drop_pending_updates=True)
-
-if __name__ == "__main__":
-    main()
+    app.run_polling(drop_pending_updates=True, allowed_updates=["message", "callback_query"])
