@@ -139,9 +139,11 @@ def main():
         if not RAILWAY_STATIC_URL.startswith("https://"):
             webhook_url = f"https://{RAILWAY_STATIC_URL}/{TELEGRAM_BOT_TOKEN}"
         else:
-            webhook_url = f"{RAILWAY_STATIC_URL}/{TELEGRAM_BOT_TOKEN}"
+            webhook_url = f"{RAILWay_STATIC_URL}/{TELEGRAM_BOT_TOKEN}" if 'RAILWay_STATIC_URL' in locals() else f"{RAILWAY_STATIC_URL}/{TELEGRAM_BOT_TOKEN}"
             
         logger.info(f"Iniciando bot via Webhook em porta {PORT} com URL: {webhook_url}")
+        
+        # Inicia o webhook com o servidor embutido do PTB
         app.run_webhook(
             listen="0.0.0.0",
             port=PORT,
@@ -149,7 +151,7 @@ def main():
             webhook_url=webhook_url,
         )
     else:
-        logger.info("Nenhuma URL pública do Railway encontrada, rodando via polling local...")
+        logger.error("ERRO CRITICO: Nenhuma URL do Railway encontrada! Verifique as variaveis de ambiente.")
         app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
