@@ -144,12 +144,6 @@ def main():
         logger.info(f"Iniciando bot via Webhook em porta {PORT} com URL: {webhook_url}")
         
         # Inicia o webhook com o servidor embutido do PTB
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            secret_token="alertasus_secret_token_secure",
-            webhook_url=webhook_url,
-        )
     else:
         logger.error("ERRO CRITICO: Nenhuma URL do Railway encontrada! Verifique as variaveis de ambiente.")
         app.run_polling(drop_pending_updates=True)
@@ -176,7 +170,7 @@ if __name__ == "__main__":
     threading.Thread(target=run_http_server, args=(PORT,), daemon=True).start()
     logger.info(f"Servidor HTTP auxiliar rodando na porta {PORT}")
 
-    logger.info("Iniciando o bot AlertaSUS via polling limpo...")
+    logger.info("Iniciando o bot AlertaSUS via polling...")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
