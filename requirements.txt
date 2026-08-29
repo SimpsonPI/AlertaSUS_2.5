@@ -3,3 +3,5 @@ python-dotenv
 supabase
 requests
 beautifulsoup4
+mercadopago
+lxml
