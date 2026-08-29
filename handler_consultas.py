@@ -173,15 +173,27 @@ async def comando_verificar_todas(update: Update, context: ContextTypes.DEFAULT_
 async def iniciar_verificar_especifico(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     try:
         user_id = update.effective_user.id
+        
+        # 1. Envia a mensagem de carregamento imediatamente
+        msg_carregando = None
+        if update.message:
+            msg_carregando = await update.message.reply_text("⏳ Consultando suas regulações, aguarde...")
+        elif update.callback_query:
+            await update.callback_query.answer("Carregando...")
+            msg_carregando = await update.callback_query.message.reply_text("⏳ Consultando suas regulações, aguarde...")
+
+        # 2. Faz a consulta no Supabase
         res = supabase.table("AlertaSUS_2.0").select("*").eq("chat_id", user_id).execute()
         regulacoes = res.data if res.data else []
 
         if not regulacoes:
             msg_sem_dados = "⚠️ Nenhuma regulação cadastrada encontrada para o seu usuário."
-            if update.message: 
-                await update.message.reply_text(msg_sem_dados)
-            elif update.callback_query: 
-                await update.callback_query.message.reply_text(msg_sem_dados)
+            if msg_carregando:
+                await context.bot.edit_message_text(
+                    chat_id=update.effective_chat.id,
+                    message_id=msg_carregando.message_id,
+                    text=msg_sem_dados
+                )
             return ConversationHandler.END
 
         teclado_botoes = []
@@ -199,72 +211,50 @@ async def iniciar_verificar_especifico(update: Update, context: ContextTypes.DEF
         reply_markup = InlineKeyboardMarkup(teclado_botoes)
 
         msg = "🔍 <b>Selecione qual regulação deseja verificar:</b>\n<i>Ou se preferir, digite o número do ID da regulação abaixo:</i>"
-        if update.message: 
-            await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="HTML")
-        elif update.callback_query: 
-            await update.callback_query.message.reply_text(msg, reply_markup=reply_markup, parse_mode="HTML")
+        
+        # 3. Substitui a mensagem de carregamento pelo menu final com os botões
+        if msg_carregando:
+            await context.bot.edit_message_text(
+                chat_id=update.effective_chat.id,
+                message_id=msg_carregando.message_id,
+                text=msg,
+                reply_markup=reply_markup,
+                parse_mode="HTML"
+            )
 
         return CONSULTAR_ID
     except Exception as e:
         logger.error(f"Erro em iniciar_verificar_especifico: {e}")
         return ConversationHandler.END
 
-async def processar_verificar_especifico(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+
+# Adicione também esta função para processar o clique/digitação da consulta específica com a mensagem de carregamento:
+async def processar_verificacao_especifica(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    if query:
+        await query.answer()
+        # Extrai o número do callback_data (ex: "ver_esp_123456" -> "123456")
+        num_reg = query.data.replace("ver_esp_", "")
+        msg_alvo = query.message
+    else:
+        num_reg = update.message.text.strip()
+        msg_alvo = update.message
+
+    msg_carregando = f"🔄 Consultando a regulação <b>{num_reg}</b> na FMS... Por favor, aguarde."
+    await msg_alvo.reply_text(msg_carregando, parse_mode="HTML")
+
     try:
-        query = update.callback_query
-        num_reg = None
-        user_id = update.effective_user.id
+        resultado = await consultar_status_fms(num_reg)
+        
+        # Busca os dados complementares salvos no Supabase para montar a mensagem completa
+        res_db = supabase.table("AlertaSUS_2.0").select("*").eq("numero_reg", num_reg).execute()
+        reg_data = res_db.data[0] if res_db.data else {}
 
-        if query:
-            await query.answer()
-            data = query.data
-
-            if data.startswith("pix_") or data.startswith("plano_") or data == "planos":
-                return ConversationHandler.END
-
-            if data == "cancelar_ver_esp":
-                await query.edit_message_text("❌ Consulta cancelada.")
-                context.user_data.clear()
-                return ConversationHandler.END
-
-            if data.startswith("ver_esp_"):
-                num_reg = data.replace("ver_esp_", "").strip()
-
-        elif update.message and update.message.text:
-            num_reg = re.sub(r"\D", "", update.message.text.strip())
-
-        if not num_reg:
-            if query and not data.startswith("ver_esp_"):
-                return ConversationHandler.END
-            return CONSULTAR_ID
-
-        # Busca dados salvos da regulação no Supabase
-        reg_db = None
-        try:
-            res = supabase.table("AlertaSUS_2.0").select("*").eq("chat_id", user_id).eq("numero_reg", num_reg).limit(1).execute()
-            if res.data:
-                reg_db = res.data[0]
-        except Exception as e:
-            logger.error(f"Erro ao buscar regulação {num_reg} no Supabase: {e}")
-
-        # Executa a consulta no portal da FMS
-        try:
-            resultado = await consultar_status_fms(num_reg)
-        except Exception as e:
-            logger.error(f"Erro FMS para {num_reg}: {e}")
-            resultado = {"sucesso": False}
-
-        msg_html = _montar_msg_html(num_reg, resultado, reg_db)
-
-        if query:
-            await query.edit_message_text(msg_html, parse_mode="HTML")
-        else:
-            await update.message.reply_text(msg_html, parse_mode="HTML")
-
-        context.user_data.clear()
-        return ConversationHandler.END
-
+        msg_html = _montar_msg_html(num_reg, resultado, reg_data)
+        await msg_alvo.reply_text(msg_html, parse_mode="HTML")
+        await msg_alvo.reply_text("✅ Consulta concluída!")
     except Exception as e:
-        logger.error(f"Erro em processar_verificar_especifico: {e}")
-        context.user_data.clear()
-        return ConversationHandler.END
+        logger.error(f"Erro ao consultar regulação específica {num_reg}: {e}")
+        await msg_alvo.reply_text("⚠️ Ocorreu um erro ao consultar esta regulação na FMS. Tente novamente mais tarde.")
+
+    return ConversationHandler.END

@@ -13,9 +13,8 @@ logger = logging.getLogger(__name__)
 sdk = mercadopago.SDK(os.getenv("MERCADOPAGO_ACCESS_TOKEN", ""))
 
 PLANOS = {
-    "pro_mensal": {"nome": "Pro Mensal", "valor": 9.90},
-    "pro_semestral": {"nome": "Pro Semestral", "valor": 9.99},
-    "pro_anual": {"nome": "Pro Anual", "valor": 14.99}
+    "pro_mensal": {"nome": "Pro Trimestral (3 meses)", "valor": 9.90},
+    "pro_semestral": {"nome": "Pro Semestral", "valor": 14.99},   
 }
 
 async def gerar_pagamento_pix(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -30,8 +29,6 @@ async def gerar_pagamento_pix(update: Update, context: ContextTypes.DEFAULT_TYPE
         # Garante mapeamento correto das chaves de planos
         if plano_chave in ["semestral", "pro_semestral"]:
             plano_chave = "pro_semestral"
-        elif plano_chave in ["anual", "pro_anual"]:
-            plano_chave = "pro_anual"
         else:
             plano_chave = "pro_mensal"
             
