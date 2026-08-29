@@ -149,8 +149,7 @@ def main():
             webhook_url=webhook_url,
         )
     else:
-        logger.info("Nenhuma URL pública do Railway encontrada, rodando via polling local...")
-        app.run_polling(drop_pending_updates=True)
-
-if __name__ == "__main__":
-    main()
+        logger.info("Nenhuma URL pública do Railway encontrada, rodando via polling local com drop_pending_updates...")
+        app.updater.start_polling(drop_pending_updates=True)
+        app.start()
+        app.updater.idle()
