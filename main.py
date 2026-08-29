@@ -1,17 +1,6 @@
-from admin import (
-    comando_estatisticas,
-    comando_listar_ativos,
-    comando_bloquear,
-    comando_detalhes,
-    comando_dar_plano,
-    comando_cortesia,
-    comando_remover_cortesia,
-    comando_aviso,
-    comando_menu_admin,
-)
+import os
 import logging
 from telegram import BotCommand, BotCommandScopeAllPrivateChats
-from telegram.error import NetworkError, TimedOut
 from telegram.ext import (
     ApplicationBuilder,
     CallbackQueryHandler,
@@ -28,7 +17,6 @@ from handler import (
     comando_privacidade,
     comando_verificar_todas,
     comando_ajuda,
-    # comando_suporte foi removido daqui
     callback_ajuda,
     faq_o_que_e,
     faq_rastrear,
@@ -57,14 +45,23 @@ from handler_admin import (
     comando_remover_cortesia,
 )
 from handler_pagamento import gerar_pagamento_pix
-
-# === IMPORTAÇÃO CORRETA DO SUPORTE ===
 from suporte import menu_suporte 
-
 from utils import (
     SELECIONAR_REGULACAO,
     SELECIONAR_CAMPO,
     AGUARDAR_NOVO_VALOR,
+)
+
+from admin import (
+    comando_estatisticas,
+    comando_listar_ativos,
+    comando_bloquear,
+    comando_detalhes,
+    comando_dar_plano,
+    comando_cortesia,
+    comando_remover_cortesia,
+    comando_aviso,
+    comando_menu_admin,
 )
 
 logging.basicConfig(
@@ -74,27 +71,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 async def erro_global_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
-    if isinstance(context.error, (TimedOut, NetworkError)):
-        logger.warning(f"Oscilação de rede com o Telegram capturada: {context.error}")
-    else:
-        logger.error(msg="Exceção capturada pelo bot:", exc_info=context.error)
-
-async def registrar_menu_nativo(app):
-    comandos = [
-        BotCommand("start", "Menu Principal"),
-        BotCommand("cadastrar_nova", "Cadastrar Nova Regulação"),
-        BotCommand("verificar_especifico", "Consultar Regulação Específica"),
-        BotCommand("verificar_todos", "Verificar Todas as Regulações"),
-        BotCommand("corrigir", "Corrigir Dados de Regulação"),
-        BotCommand("excluir", "Excluir Regulação"),
-        BotCommand("planos", "Ver Planos de Assinatura"),
-        BotCommand("privacidade", "Política de Privacidade e LGPD"),
-        BotCommand("ajuda", "Central de Ajuda e FAQ"),
-        BotCommand("suporte", "Falar com o Suporte"),
-        BotCommand("admin", "Painel Administrativo"),
-    ]
-    await app.bot.delete_my_commands(scope=BotCommandScopeAllPrivateChats())
-    await app.bot.set_my_commands(commands=comandos, scope=BotCommandScopeAllPrivateChats())
+    logger.error(msg="Exceção capturada pelo bot:", exc_info=context.error)
 
 def main():
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
@@ -128,8 +105,6 @@ def main():
     app.add_handler(CommandHandler("planos", comando_planos))
     app.add_handler(CommandHandler("privacidade", comando_privacidade))
     app.add_handler(CommandHandler("ajuda", comando_ajuda))
-    
-    # === REGISTRO ATUALIZADO DO SUPORTE ===
     app.add_handler(CommandHandler("suporte", menu_suporte))
 
     app.add_handler(CommandHandler("conceder_cortesia", comando_conceder_cortesia))
@@ -147,20 +122,35 @@ def main():
     app.add_handler(CallbackQueryHandler(start, pattern="^iniciar$"))
     app.add_handler(CallbackQueryHandler(callback_faq_suporte, pattern="^abrir_faq_suporte$"))
     app.add_handler(CallbackQueryHandler(callback_privacidade_voltar, pattern="^privacidade_voltar$"))
-    app.add_handler(CallbackQueryHandler(callback_ajuda, pattern="^ajuda$"))
+    app.add_handler(CallbackQueryHandler(CallbackQueryHandler, pattern="^ajuda$"))
     app.add_handler(CallbackQueryHandler(faq_o_que_e, pattern="^faq_o_que_e$"))
     app.add_handler(CallbackQueryHandler(faq_rastrear, pattern="^faq_rastrear$"))
     app.add_handler(CallbackQueryHandler(faq_seguranca, pattern="^faq_seguranca$"))
-    app.add_handler(CallbackQueryHandler(faq_corrigir, pattern="^faq_corrigir$"))
+    app.add_handler(CallbackGroup := CallbackQueryHandler(faq_corrigir, pattern="^faq_corrigir$"))
     app.add_handler(CallbackQueryHandler(voltar_ajuda, pattern="^voltar_ajuda$"))
     app.add_handler(CallbackQueryHandler(comando_verificar_todas, pattern="^verificar_todos$"))
     app.add_handler(CallbackQueryHandler(comando_privacidade, pattern="^privacidade$"))
 
-    logger.info("Iniciando o bot AlertaSUS...")
-    app.run_polling(drop_pending_updates=True)
+    # Configuração de Webhook para Railway
+    PORT = int(os.environ.get("PORT", "8080"))
+    RAILWAY_STATIC_URL = os.environ.get("RAILWAY_STATIC_URL") or os.environ.get("RAILWAY_PUBLIC_DOMAIN")
+
+    if RAILWAY_STATIC_URL:
+        if not RAILWAY_STATIC_URL.startswith("https://"):
+            webhook_url = f"https://{RAILWAY_STATIC_URL}/{TELEGRAM_BOT_TOKEN}"
+        else:
+            webhook_url = f"{RAILWAY_STATIC_URL}/{TELEGRAM_BOT_TOKEN}"
+            
+        logger.info(f"Iniciando bot via Webhook em porta {PORT} com URL: {webhook_url}")
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=PORT,
+            secret_token="alertasus_secret_token_secure",
+            webhook_url=webhook_url,
+        )
+    else:
+        logger.info("Nenhuma URL pública do Railway encontrada, rodando via polling local...")
+        app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        logger.critical(f"Erro crítico ao iniciar a aplicação: {e}")
+    main()
