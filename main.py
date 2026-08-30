@@ -60,6 +60,22 @@ from admin import (
     comando_menu_admin,
 )
 
+# ═══════════════════════════════════════════════════════════════
+# NOVOS IMPORTS — ATENDIMENTO AO CLIENTE
+# ═══════════════════════════════════════════════════════════════
+from handler_atendimento import (
+    menu_atendimento,
+    iniciar_faq,
+    processar_pergunta_faq,
+    iniciar_atendimento_humanizado,
+    processar_mensagem_humanizado,
+    ver_meus_chamados,
+    comando_ver_chamados,
+    comando_responder_chamado,
+    AGUARDANDO_MENSAGEM_CHAMADO,
+    cancelar_atendimento,
+)
+
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
@@ -87,10 +103,34 @@ def main():
         fallbacks=[CallbackQueryHandler(selecionar_regulacao_callback, pattern="^cancelar_corr$")],
     )
 
+    # ═══════════════════════════════════════════════════════════════
+    # NOVO — CONVERSATION HANDLER PARA ATENDIMENTO HUMANIZADO
+    # ═══════════════════════════════════════════════════════════════
+    conv_atendimento_humanizado = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(iniciar_atendimento_humanizado, pattern="^atendimento_humanizado$"),
+            CommandHandler("atendimento_humanizado", iniciar_atendimento_humanizado),
+        ],
+        states={
+            AGUARDANDO_MENSAGEM_CHAMADO: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, processar_mensagem_humanizado)
+            ],
+        },
+        fallbacks=[
+            CommandHandler("cancelar", cancelar_atendimento),
+            CallbackQueryHandler(cancelar_atendimento, pattern="^cancelar_atendimento$"),
+        ],
+        per_message=False,
+    )
+
     app.add_handler(conv_cadastro)
     app.add_handler(conv_consulta_especifica)
     app.add_handler(conv_corrigir)
     app.add_handler(conv_excluir)
+    # ═══════════════════════════════════════════════════════════════
+    # NOVO — ADICIONA O CONVERSATION HANDLER DE ATENDIMENTO
+    # ═══════════════════════════════════════════════════════════════
+    app.add_handler(conv_atendimento_humanizado)
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("iniciar", start))
@@ -104,6 +144,14 @@ def main():
     app.add_handler(CommandHandler("privacidade", comando_privacidade))
     app.add_handler(CommandHandler("ajuda", comando_ajuda))
     app.add_handler(CommandHandler("suporte", menu_suporte))
+
+    # ═══════════════════════════════════════════════════════════════
+    # NOVOS COMANDOS — ATENDIMENTO AO CLIENTE
+    # ═══════════════════════════════════════════════════════════════
+    app.add_handler(CommandHandler("atendimento", menu_atendimento))
+    app.add_handler(CommandHandler("faq", iniciar_faq))
+    app.add_handler(CommandHandler("chamados", comando_ver_chamados))
+    app.add_handler(CommandHandler("responder", comando_responder_chamado))
 
     # Comandos Administrativos unificados do admin.py
     app.add_handler(CommandHandler("admin", comando_menu_admin))
@@ -131,6 +179,22 @@ def main():
     app.add_handler(CallbackQueryHandler(voltar_ajuda, pattern="^voltar_ajuda$"))
     app.add_handler(CallbackQueryHandler(comando_verificar_todas, pattern="^verificar_todos$"))
     app.add_handler(CallbackQueryHandler(comando_privacidade, pattern="^privacidade$"))
+
+    # ═══════════════════════════════════════════════════════════════
+    # NOVOS CALLBACKS — ATENDIMENTO AO CLIENTE
+    # ═══════════════════════════════════════════════════════════════
+    app.add_handler(CallbackQueryHandler(menu_atendimento, pattern="^atendimento_menu$"))
+    app.add_handler(CallbackQueryHandler(iniciar_faq, pattern="^atendimento_faq$"))
+    app.add_handler(CallbackQueryHandler(iniciar_atendimento_humanizado, pattern="^atendimento_humanizado$"))
+    app.add_handler(CallbackQueryHandler(ver_meus_chamados, pattern="^ver_chamados$"))
+    app.add_handler(CallbackQueryHandler(menu_atendimento, pattern="^atendimento_email$"))
+    app.add_handler(CallbackQueryHandler(cancelar_atendimento, pattern="^cancelar_atendimento$"))
+    
+    # Handler para processar perguntas do FAQ quando o usuário digita texto
+    app.add_handler(
+        MessageHandler(filters.TEXT & ~filters.COMMAND, processar_pergunta_faq),
+        group=1
+    )
 
     # Servidor HTTP auxiliar para o Railway manter a porta aberta e execução via Polling
     PORT = int(os.environ.get("PORT", "8080"))

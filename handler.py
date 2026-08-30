@@ -202,7 +202,7 @@ async def obter_menu_planos(user_id: int) -> InlineKeyboardMarkup:
         keyboard.append([InlineKeyboardButton("🎁 Plano Degustação (Grátis)", callback_data="plano_degustacao")])
     keyboard.append([InlineKeyboardButton("⭐ Plano Trimestral (R$ 9,99)", callback_data="plano_semestral")])
     keyboard.append([InlineKeyboardButton("🚀 Plano Semestral (R$ 14,99)", callback_data="plano_anual")])
-    keyboard.append([InlineKeyboardButton("💬 Falar com Comercial", url="https://wa.me/5586994083113")])
+    keyboard.append([InlineKeyboardButton("📧 Email de Suporte", url="mailto:suportealertasus@gmail.com")])
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -278,16 +278,16 @@ async def detalhar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         texto = "🎁 <b>Plano Degustação Ativado!</b>\n\nSeu período de teste gratuito já está funcionando (até 2 regulações)."
         keyboard_botoes = [[InlineKeyboardButton("⚡ Ver Planos Pro", callback_data="planos")]]
-    elif data == "plano_semestral":
-        texto = "⭐ <b>Plano Semestral</b>\n\n• Até 5 regulações.\n<b>Valor:</b> R$ 9,99 / semestre"
+    elif data == "plano_trimestral":
+        texto = "⭐ <b>Plano Trimestral</b>\n\n• Até 5 regulações.\n<b>Valor:</b> R$ 9,99 / trimestre"
         keyboard_botoes = [
-            [InlineKeyboardButton("💳 Pagar via Pix", callback_data="pix_pro_semestral")],
+            [InlineKeyboardButton("💳 Pagar via Pix", callback_data="pix_pro_trimestral")],
             [InlineKeyboardButton("⬅️ Voltar aos Planos", callback_data="planos")],
         ]
-    elif data == "plano_anual":
-        texto = "🚀 <b>Plano Anual</b>\n\n• Até 9 regulações.\n<b>Valor:</b> R$ 14,99 / ano"
+    elif data == "plano_semestral":
+        texto = "🚀 <b>Plano Semestral</b>\n\n• Até 9 regulações.\n<b>Valor:</b> R$ 14,99 / semestre"
         keyboard_botoes = [
-            [InlineKeyboardButton("💳 Pagar via Pix", callback_data="pix_pro_anual")],
+            [InlineKeyboardButton("💳 Pagar via Pix", callback_data="pix_pro_semestral")],
             [InlineKeyboardButton("⬅️ Voltar aos Planos", callback_data="planos")],
         ]
     else:
@@ -471,6 +471,9 @@ async def configurar_menu_comandos(app):
         BotCommand("privacidade", "🔒 Política de privacidade e LGPD"),
         BotCommand("ajuda", "❓ Central de ajuda e suporte"),
         BotCommand("suporte", "💬 Falar com o suporte"),
+        BotCommand("atendimento", "🤖 Central de Atendimento"),
+        BotCommand("chamados", "📋 Ver Chamados (Admin)"),
+        BotCommand("responder", "💬 Responder Chamado (Admin)"),
     ]
     await app.bot.set_my_commands(comandos)
 
@@ -506,7 +509,7 @@ conv_cadastro = ConversationHandler(
         ETAPA_REGULACAO: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_regulacao)],
         ETAPA_CBO: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_cbo)],
         ETAPA_PROCEDIMENTO: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_procedimento)],
-        ETAPA_LGPD: [CallbackQueryHandler(finalizar_cadastro, pattern="^(aceitar_lgpd|cancelar_cadastro)$")], # <--- ATUALIZE ESTA LINHA
+        ETAPA_LGPD: [CallbackQueryHandler(finalizar_cadastro, pattern="^(aceitar_lgpd|cancelar_cadastro)$")],
     },
     fallbacks=[CommandHandler("cancelar", cancelar_operacao)],
     per_message=False,
@@ -540,7 +543,181 @@ conv_excluir = ConversationHandler(
 )
 
 
-# --- EXPORTAÇÃO DE SÍMBOLOS DO HANDLER ---
+# ═══════════════════════════════════════════════════════════════
+# NOVAS FUNÇÕES DE ATENDIMENTO AO CLIENTE (ADICIONADAS ABAIXO)
+# SEM ALTERAR NENHUMA FUNÇÃO EXISTENTE ACIMA
+# ═══════════════════════════════════════════════════════════════
+
+# --- IMPORTS DAS FUNÇÕES DE ATENDIMENTO ---
+try:
+    from handler_atendimento import (
+        menu_atendimento,
+        iniciar_faq,
+        processar_pergunta_faq,
+        iniciar_atendimento_humanizado,
+        processar_mensagem_humanizado,
+        ver_meus_chamados,
+        comando_ver_chamados,
+        comando_responder_chamado,
+        cancelar_atendimento,
+    )
+    from database_atendimento import (
+        buscar_faq_por_palavras_chave,
+        registrar_chamado_suporte,
+        adicionar_mensagem_fila,
+        registrar_historico,
+        obter_email_suporte,
+    )
+    ATENDIMENTO_IMPORTADO = True
+except ImportError as e:
+    logger.warning(f"Erro ao importar funções de atendimento: {e}")
+    ATENDIMENTO_IMPORTADO = False
+
+
+# --- CONSTANTE DE ESTADO DO ATENDIMENTO HUMANIZADO ---
+AGUARDANDO_MENSAGEM_CHAMADO = 1
+
+
+# --- NOVO CONVERSATION HANDLER PARA ATENDIMENTO HUMANIZADO ---
+conv_atendimento_humanizado = ConversationHandler(
+    entry_points=[
+        CallbackQueryHandler(iniciar_atendimento_humanizado, pattern="^atendimento_humanizado$"),
+        CommandHandler("atendimento_humanizado", iniciar_atendimento_humanizado),
+    ],
+    states={
+        AGUARDANDO_MENSAGEM_CHAMADO: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, processar_mensagem_humanizado)
+        ],
+    },
+    fallbacks=[
+        CommandHandler("cancelar", cancelar_atendimento),
+        CallbackQueryHandler(cancelar_atendimento, pattern="^cancelar_atendimento$"),
+    ],
+    per_message=False,
+)
+
+
+# --- FUNÇÃO PARA EXIBIR MENU DE ATENDIMENTO ---
+async def comando_atendimento(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando /atendimento para acessar a central de atendimento."""
+    if ATENDIMENTO_IMPORTADO:
+        await menu_atendimento(update, context)
+    else:
+        if update.message:
+            await update.message.reply_text(
+                "🤖 <b>Central de Atendimento AlertaSUS 2.0</b>\n\n"
+                "Olá! Como posso ajudar você hoje?\n\n"
+                "<b>Opções disponíveis:</b>\n"
+                "• ❓ <b>FAQ Automático:</b> Respostas instantâneas para dúvidas frequentes\n"
+                "• 👤 <b>Atendimento Humanizado:</b> Fale diretamente com nossa equipe\n"
+                "• 📧 <b>Email de Suporte:</b> suportealertasus@gmail.com\n\n"
+                "Selecione uma opção abaixo:",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("❓ FAQ Automático", callback_data="atendimento_faq"),
+                        InlineKeyboardButton("👤 Atendimento Humanizado", callback_data="atendimento_humanizado")
+                    ],
+                    [
+                        InlineKeyboardButton("📧 Email de Suporte", url="mailto:suportealertasus@gmail.com")
+                    ],
+                    [InlineKeyboardButton("⬅️ Voltar ao Menu Principal", callback_data="iniciar")]
+                ])
+            )
+
+
+# --- FUNÇÃO PARA INICIAR FAQ ---
+async def comando_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando /faq para acessar o FAQ automático."""
+    if ATENDIMENTO_IMPORTADO:
+        await iniciar_faq(update, context)
+    else:
+        if update.message:
+            await update.message.reply_text(
+                "📚 <b>FAQ Automático - AlertaSUS 2.0</b>\n\n"
+                "Digite abaixo sua dúvida que nossa IA tentará responder automaticamente.\n"
+                "Ou clique em um dos tópicos abaixo:\n\n"
+                "1️⃣ Como cadastrar uma regulação?\n"
+                "2️⃣ Como consultar minhas regulações?\n"
+                "3️⃣ Onde encontrar o Cartão SUS ou ID?\n"
+                "4️⃣ Como alterar meus dados?\n"
+                "5️⃣ Planos e Assinaturas\n"
+                "6️⃣ O AlertaSUS tem vínculo com o governo?",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("1️⃣ Cadastrar", callback_data="faq_cadastrar"),
+                        InlineKeyboardButton("2️⃣ Consultar", callback_data="faq_consultar")
+                    ],
+                    [
+                        InlineKeyboardButton("3️⃣ Cartão SUS/ID", callback_data="faq_id"),
+                        InlineKeyboardButton("4️⃣ Alterar Dados", callback_data="faq_alterar")
+                    ],
+                    [
+                        InlineKeyboardButton("5️⃣ Planos", callback_data="faq_planos"),
+                        InlineKeyboardButton("6️⃣ Vínculo Governo", callback_data="faq_governo")
+                    ],
+                    [InlineKeyboardButton("👤 Falar com Humano", callback_data="atendimento_humanizado")],
+                    [InlineKeyboardButton("⬅️ Voltar", callback_data="atendimento_menu")]
+                ])
+            )
+
+
+# --- CALLBACK PARA VOLTAR AO MENU DE ATENDIMENTO ---
+async def voltar_menu_atendimento(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Volta para o menu principal de atendimento."""
+    query = update.callback_query
+    await query.answer()
+    
+    texto = (
+        "🤖 <b>Central de Atendimento AlertaSUS 2.0</b>\n\n"
+        "Olá! Como posso ajudar você hoje?\n\n"
+        "<b>Opções disponíveis:</b>\n"
+        "• ❓ <b>FAQ Automático:</b> Respostas instantâneas para dúvidas frequentes\n"
+        "• 👤 <b>Atendimento Humanizado:</b> Fale diretamente com nossa equipe\n"
+        "• 📧 <b>Email de Suporte:</b> suportealertasus@gmail.com\n\n"
+        "Selecione uma opção abaixo:"
+    )
+    
+    teclado = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("❓ FAQ Automático", callback_data="atendimento_faq"),
+            InlineKeyboardButton("👤 Atendimento Humanizado", callback_data="atendimento_humanizado")
+        ],
+        [
+            InlineKeyboardButton("📧 Email de Suporte", url="mailto:suportealertasus@gmail.com")
+        ],
+        [InlineKeyboardButton("⬅️ Voltar ao Menu Principal", callback_data="iniciar")]
+    ])
+    
+    await query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
+
+
+# --- CALLBACK PARA PROCESSAR EMAIL DE SUPORTE ---
+async def callback_email_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Exibe informações sobre email de suporte."""
+    query = update.callback_query
+    await query.answer()
+    
+    texto = (
+        "📧 <b>Email de Suporte</b>\n\n"
+        "Para entrar em contato com nossa equipe, utilize o email:\n\n"
+        "<b>suportealertasus@gmail.com</b>\n\n"
+        "Nossa equipe responderá o mais breve possível.\n\n"
+        "<b>Horário de atendimento:</b>\n"
+        "Segunda a Sexta: 08h às 18h\n"
+        "Sábado: 08h às 12h"
+    )
+    
+    teclado = InlineKeyboardMarkup([
+        [InlineKeyboardButton("⬅️ Voltar ao Menu de Atendimento", callback_data="atendimento_menu")],
+        [InlineKeyboardButton("👤 Falar com Atendente", callback_data="atendimento_humanizado")]
+    ])
+    
+    await query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
+
+
+# --- EXPORTAÇÃO DE SÍMBOLOS DO HANDLER ATUALIZADA ---
 __all__ = [
     "CONSULTAR_ID",
     "SELECIONAR_REGULACAO",
@@ -600,4 +777,11 @@ __all__ = [
     "obter_menu_principal",
     "obter_menu_planos",
     "detalhar_plano",
+    # NOVOS SÍMBOLOS DE ATENDIMENTO
+    "comando_atendimento",
+    "comando_faq",
+    "voltar_menu_atendimento",
+    "callback_email_suporte",
+    "conv_atendimento_humanizado",
+    "AGUARDANDO_MENSAGEM_CHAMADO",
 ]
