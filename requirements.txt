@@ -1,7 +1,12 @@
-python-telegram-bot[webhooks]
-python-dotenv
+# Substitua o conteúdo do requirements.txt
+@"
+python-telegram-bot[job-queue]>=20.0
+httpx>=0.27.0
+beautifulsoup4==4.12.3
 supabase
-requests
-beautifulsoup4
+python-dotenv==1.0.1
 mercadopago
-lxml
+streamlit
+starlette<1.4.0
+pandas
+"@ | Set-Content -Path "requirements.txt"
