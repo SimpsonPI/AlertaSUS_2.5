@@ -61,22 +61,6 @@ from suporte import (
     conv_suporte,
 )
 
-# ═══════════════════════════════════════════════════════════════
-# NOVOS IMPORTS — ATENDIMENTO AO CLIENTE
-# ═══════════════════════════════════════════════════════════════
-from handler_atendimento import (
-    menu_atendimento,
-    iniciar_faq,
-    processar_pergunta_faq,
-    iniciar_atendimento_humanizado,
-    processar_mensagem_humanizado,
-    ver_meus_chamados,
-    comando_ver_chamados,
-    comando_responder_chamado,
-    AGUARDANDO_MENSAGEM_CHAMADO,
-    cancelar_atendimento,
-)
-
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
@@ -120,9 +104,6 @@ def main():
         fallbacks=[CallbackQueryHandler(selecionar_regulacao_callback, pattern="^cancelar_corr$")],
     )
 
-    # ═══════════════════════════════════════════════════════════════
-    # NOVO — CONVERSATION HANDLER PARA ATENDIMENTO HUMANIZADO
-    # ═══════════════════════════════════════════════════════════════
     conv_atendimento_humanizado = ConversationHandler(
         entry_points=[
             CallbackQueryHandler(iniciar_atendimento_humanizado, pattern="^atendimento_humanizado$"),
@@ -144,9 +125,6 @@ def main():
     app.add_handler(conv_consulta_especifica)
     app.add_handler(conv_corrigir)
     app.add_handler(conv_excluir)
-    # ═══════════════════════════════════════════════════════════════
-    # NOVO — ADICIONA O CONVERSATION HANDLER DE ATENDIMENTO
-    # ═══════════════════════════════════════════════════════════════
     app.add_handler(conv_atendimento_humanizado)
 
     app.add_handler(CommandHandler("start", start))
@@ -159,15 +137,7 @@ def main():
     app.add_handler(CommandHandler("excluir", iniciar_excluir))
     app.add_handler(CommandHandler("planos", comando_planos))
     app.add_handler(CommandHandler("privacidade", comando_privacidade))
-    app.add_handler(CommandHandler("suporte", menu_suporte))  # <-- USANDO menu_suporte do suporte.py
-
-    # ═══════════════════════════════════════════════════════════════
-    # NOVOS COMANDOS — ATENDIMENTO AO CLIENTE
-    # ═══════════════════════════════════════════════════════════════
-    app.add_handler(CommandHandler("atendimento", menu_atendimento))
-    app.add_handler(CommandHandler("faq", iniciar_faq))
-    app.add_handler(CommandHandler("chamados", comando_ver_chamados))
-    app.add_handler(CommandHandler("responder", comando_responder_chamado))
+    app.add_handler(CommandHandler("suporte", menu_suporte))  # ✅ USANDO menu_suporte
 
     # Comandos Administrativos unificados do admin.py
     app.add_handler(CommandHandler("admin", comando_menu_admin))
@@ -187,19 +157,12 @@ def main():
     app.add_handler(CallbackQueryHandler(start, pattern="^iniciar$"))
 
     # ═══════════════════════════════════════════════════════════════
-    # NOVOS CALLBACKS — FAQ DO SUPORTE
+    # CALLBACKS DO SUPORTE
     # ═══════════════════════════════════════════════════════════════
     app.add_handler(CallbackQueryHandler(exibir_resposta_faq, pattern="^faq_"))
-
-    # ═══════════════════════════════════════════════════════════════
-    # NOVOS CALLBACKS — ATENDIMENTO AO CLIENTE
-    # ═══════════════════════════════════════════════════════════════
-    app.add_handler(CallbackQueryHandler(menu_atendimento, pattern="^atendimento_menu$"))
-    app.add_handler(CallbackQueryHandler(iniciar_faq, pattern="^atendimento_faq$"))
-    app.add_handler(CallbackQueryHandler(iniciar_atendimento_humanizado, pattern="^atendimento_humanizado$"))
-    app.add_handler(CallbackQueryHandler(ver_meus_chamados, pattern="^ver_chamados$"))
-    app.add_handler(CallbackQueryHandler(menu_atendimento, pattern="^atendimento_email$"))
-    app.add_handler(CallbackQueryHandler(cancelar_atendimento, pattern="^cancelar_atendimento$"))
+    app.add_handler(CallbackQueryHandler(iniciar_atendimento_20, pattern="^iniciar_atendimento_20$"))
+    app.add_handler(CallbackQueryHandler(cancelar_suporte, pattern="^fechar_menu$"))
+    app.add_handler(CallbackQueryHandler(menu_suporte, pattern="^suporte$"))
 
     # ═══════════════════════════════════════════════════════════════
     # ADICIONA O CONVERSATION HANDLER DO SUPORTE
