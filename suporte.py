@@ -33,7 +33,7 @@ async def menu_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     teclado = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("🤖 Bot de Atendimento", url="https://t.me/meu_atendimento_123_bot"),
-            InlineKeyboardButton("📧 Email", url="mailto:suportealertasus@gmail.com")
+            [InlineKeyboardButton("📧 Email", callback_data="suporte_email")]
         ],
         [
             InlineKeyboardButton("1️⃣ Cadastrar", callback_data="faq_cadastrar"),
