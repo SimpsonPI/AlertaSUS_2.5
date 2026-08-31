@@ -181,6 +181,27 @@ conv_suporte = ConversationHandler(
     fallbacks=[
         CallbackQueryHandler(exibir_resposta_faq, pattern="^faq_"),
         CallbackQueryHandler(iniciar_atendimento_20, pattern="^iniciar_atendimento_20$"),
+
+        async def suporte_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Exibe o email de suporte."""
+    query = update.callback_query
+    await query.answer()
+    
+    texto = (
+        "📧 <b>Email de Suporte</b>\n\n"
+        "Para entrar em contato com nossa equipe, utilize o email:\n\n"
+        "<b>suportealertasus@gmail.com</b>\n\n"
+        "Nossa equipe responderá o mais breve possível.\n\n"
+        "<b>Horário de atendimento:</b>\n"
+        "Segunda a Sexta: 08h às 18h\n"
+        "Sábado: 08h às 12h"
+    )
+    
+    teclado = InlineKeyboardMarkup([
+        [InlineKeyboardButton("⬅️ Voltar ao Menu de Atendimento", callback_data="suporte")]
+    ])
+    
+    await query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
         CallbackQueryHandler(menu_suporte, pattern="^suporte$"),
         CallbackQueryHandler(cancelar_suporte, pattern="^fechar_menu$"),
     ],
