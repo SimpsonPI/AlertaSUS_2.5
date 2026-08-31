@@ -337,51 +337,47 @@ async def comando_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.callback_query.message.edit_text(texto, reply_markup=reply_markup, parse_mode="Markdown")
 
 async def comando_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Envia os contatos e opções diretas de suporte."""
+    """Central de Atendimento - Links, FAQs e Email"""
     texto = (
-        "💬 *Central de Suporte*\n\n"
-        "Precisa de ajuda humana ou encontrou algum problema crítico?\n"
-        "Entre em contato conosco pelos canais oficiais ou utilize o menu de ajuda abaixo."
+        "🤖 <b>Central de Atendimento AlertaSUS 2.0</b>\n\n"
+        "Como podemos ajudar você hoje?\n\n"
+        "<b>📌 Canais de Atendimento:</b>\n"
+        "• 🤖 <b>Bot de Atendimento:</b> @meu_atendimento_123_bot\n"
+        "• 📧 <b>Email:</b> suportealertasus@gmail.com\n\n"
+        "<b>❓ Perguntas Frequentes (FAQs):</b>\n"
+        "1️⃣ Como cadastrar uma nova regulação?\n"
+        "2️⃣ Como verificar o status das regulações?\n"
+        "3️⃣ Onde encontrar o Cartão SUS ou ID?\n"
+        "4️⃣ Como corrigir dados?\n"
+        "5️⃣ Planos e Assinaturas\n"
+        "6️⃣ O AlertaSUS tem vínculo com o governo?\n\n"
+        "Selecione uma opção abaixo:"
     )
     
-    teclado = [
-        [InlineKeyboardButton("❓ Ver Perguntas Frequentes (FAQ)", callback_data="ajuda")],
-        [InlineKeyboardButton("🔙 Voltar ao Início", callback_data="iniciar")]
-    ]
-    reply_markup = InlineKeyboardMarkup(teclado)
+    teclado = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🤖 Bot de Atendimento", url="https://t.me/meu_atendimento_123_bot"),
+            InlineKeyboardButton("📧 Email", url="mailto:suportealertasus@gmail.com")
+        ],
+        [
+            InlineKeyboardButton("1️⃣ Cadastrar", callback_data="faq_cadastrar"),
+            InlineKeyboardButton("2️⃣ Consultar", callback_data="faq_consultar")
+        ],
+        [
+            InlineKeyboardButton("3️⃣ Cartão SUS/ID", callback_data="faq_id"),
+            InlineKeyboardButton("4️⃣ Alterar Dados", callback_data="faq_alterar")
+        ],
+        [
+            InlineKeyboardButton("5️⃣ Planos", callback_data="faq_planos"),
+            InlineKeyboardButton("6️⃣ Vínculo Governo", callback_data="faq_governo")
+        ],
+        [InlineKeyboardButton("⬅️ Voltar ao Menu Principal", callback_data="iniciar")]
+    ])
     
     if update.message:
-        await update.message.reply_text(texto, reply_markup=reply_markup, parse_mode="Markdown")
+        await update.message.reply_text(texto, reply_markup=teclado, parse_mode="HTML")
     elif update.callback_query:
-        await update.callback_query.message.edit_text(texto, reply_markup=reply_markup, parse_mode="Markdown")
-
-
-async def callback_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    if query:
-        try:
-            await query.answer()
-        except Exception:
-            pass
-    
-    script_atendimento = (
-        "🤖 <b>Central de Atendimento Automatizado — AlertaSUS</b>\n\n"
-        "Seja bem-vindo(a) ao suporte do AlertaSUS! Selecione abaixo o tópico sobre o qual deseja tirar suas dúvidas:"
-    )
-
-    teclado = InlineKeyboardMarkup([
-        [InlineKeyboardButton("1️⃣ O que é o AlertaSUS?", callback_data="faq_o_que_e")],
-        [InlineKeyboardButton("2️⃣ Como rastrear minha regulação?", callback_data="faq_rastrear")],
-        [InlineKeyboardButton("3️⃣ Meus dados estão seguros?", callback_data="faq_seguranca")],
-        [InlineKeyboardButton("4️⃣ Como corrigir dados / CBO?", callback_data="faq_corrigir")],
-        [InlineKeyboardButton("⬅️ Voltar", callback_data="voltar_inicio")]
-    ])
-
-    if query and query.message:
-        await query.edit_message_text(script_atendimento, parse_mode="HTML", reply_markup=teclado)
-    elif update.message:
-        await update.message.reply_text(script_atendimento, parse_mode="HTML", reply_markup=teclado)
-
+        await update.callback_query.message.edit_text(texto, reply_markup=teclado, parse_mode="HTML")
 
 async def voltar_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Retorna para o menu principal de ajuda."""
@@ -775,4 +771,11 @@ __all__ = [
     "callback_email_suporte",
     "conv_atendimento_humanizado",
     "AGUARDANDO_MENSAGEM_CHAMADO",
+    "comando_suporte",
+    "faq_cadastrar",
+    "faq_consultar",
+    "faq_id",
+    "faq_alterar",
+    "faq_planos",
+    "faq_governo",
 ]
