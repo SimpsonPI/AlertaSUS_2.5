@@ -82,6 +82,22 @@ logger = logging.getLogger(__name__)
 async def erro_global_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(msg="Exceção capturada pelo bot:", exc_info=context.error)
 
+async def registrar_menu_nativo(app):
+    """Configura o menu de comandos oficial do Telegram."""
+    comandos = [
+        BotCommand("iniciar", "🚀 Menu principal e boas-vindas"),
+        BotCommand("verificar_todos", "🔍 Verificar todas as regulações"),
+        BotCommand("verificar_especifico", "🎯 Verificar regulação específica"),
+        BotCommand("cadastrar_nova", "➕ Cadastrar nova regulação"),
+        BotCommand("corrigir", "✏️ Corrigir dados de regulação"),
+        BotCommand("planos", "💳 Ver planos e assinaturas"),
+        BotCommand("excluir", "🗑️ Excluir uma regulação"),
+        BotCommand("privacidade", "🔒 Política de privacidade e LGPD"),
+        BotCommand("suporte", "🤖 Central de Atendimento"),
+    ]
+    
+    await app.bot.set_my_commands(comandos)
+
 def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN") or TELEGRAM_BOT_TOKEN
     app = ApplicationBuilder().token(token).build()
@@ -139,7 +155,7 @@ def main():
     app.add_handler(CommandHandler("excluir", iniciar_excluir))
     app.add_handler(CommandHandler("planos", comando_planos))
     app.add_handler(CommandHandler("privacidade", comando_privacidade))
-    app.add_handler(CommandHandler("suporte", comando_suporte))  # <-- AJUSTADO
+    app.add_handler(CommandHandler("suporte", comando_suporte))
 
     # ═══════════════════════════════════════════════════════════════
     # NOVOS COMANDOS — ATENDIMENTO AO CLIENTE
@@ -212,6 +228,13 @@ def main():
     logger.info(f"Servidor HTTP auxiliar rodando na porta {PORT}")
 
     logger.info("Iniciando o bot AlertaSUS via polling...")
+    
+    # ═══════════════════════════════════════════════════════════════
+    # CONFIGURA O MENU DE COMANDOS ANTES DE INICIAR O POLLING
+    # ═══════════════════════════════════════════════════════════════
+    import asyncio
+    asyncio.get_event_loop().run_until_complete(registrar_menu_nativo(app))
+    
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
