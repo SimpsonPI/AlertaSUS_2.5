@@ -16,13 +16,8 @@ from handler import (
     comando_planos,
     comando_privacidade,
     comando_verificar_todas,
-    callback_ajuda,
-    faq_o_que_e,
-    faq_rastrear,
-    faq_seguranca,
-    faq_corrigir,
+    comando_suporte,
     detalhar_plano,
-    voltar_ajuda,
     conv_cadastro,
     conv_consulta_especifica,
     conv_excluir,
@@ -31,15 +26,12 @@ from handler import (
     iniciar_excluir,
     iniciar_verificar_especifico,
     start,
-    callback_faq_suporte,
-    callback_privacidade_voltar,
-    comando_suporte,  # <-- ADICIONADO
-    faq_cadastrar,    # <-- ADICIONADO
-    faq_consultar,    # <-- ADICIONADO
-    faq_id,           # <-- ADICIONADO
-    faq_alterar,      # <-- ADICIONADO
-    faq_planos,       # <-- ADICIONADO
-    faq_governo,      # <-- ADICIONADO
+    faq_cadastrar,
+    faq_consultar,
+    faq_id,
+    faq_alterar,
+    faq_planos,
+    faq_governo,
 )
 from handler_gestao import (
     selecionar_regulacao_callback,
@@ -147,8 +139,7 @@ def main():
     app.add_handler(CommandHandler("excluir", iniciar_excluir))
     app.add_handler(CommandHandler("planos", comando_planos))
     app.add_handler(CommandHandler("privacidade", comando_privacidade))
-    # app.add_handler(CommandHandler("ajuda", comando_ajuda))  # <-- REMOVIDO
-    app.add_handler(CommandHandler("suporte", comando_suporte))  # <-- ALTERADO
+    app.add_handler(CommandHandler("suporte", comando_suporte))  # <-- AJUSTADO
 
     # ═══════════════════════════════════════════════════════════════
     # NOVOS COMANDOS — ATENDIMENTO AO CLIENTE
@@ -174,16 +165,6 @@ def main():
     app.add_handler(CallbackQueryHandler(gerar_pagamento_pix, pattern="^pix_"))
     app.add_handler(CallbackQueryHandler(comando_planos, pattern="^planos$"))
     app.add_handler(CallbackQueryHandler(start, pattern="^iniciar$"))
-    app.add_handler(CallbackQueryHandler(callback_faq_suporte, pattern="^abrir_faq_suporte$"))
-    app.add_handler(CallbackQueryHandler(callback_privacidade_voltar, pattern="^privacidade_voltar$"))
-    app.add_handler(CallbackQueryHandler(voltar_ajuda, pattern="^ajuda$"))
-    app.add_handler(CallbackQueryHandler(faq_o_que_e, pattern="^faq_o_que_e$"))
-    app.add_handler(CallbackQueryHandler(faq_rastrear, pattern="^faq_rastrear$"))
-    app.add_handler(CallbackQueryHandler(faq_seguranca, pattern="^faq_seguranca$"))
-    app.add_handler(CallbackQueryHandler(faq_corrigir, pattern="^faq_corrigir$"))
-    app.add_handler(CallbackQueryHandler(voltar_ajuda, pattern="^voltar_ajuda$"))
-    app.add_handler(CallbackQueryHandler(comando_verificar_todas, pattern="^verificar_todos$"))
-    app.add_handler(CallbackQueryHandler(comando_privacidade, pattern="^privacidade$"))
 
     # ═══════════════════════════════════════════════════════════════
     # NOVOS CALLBACKS — FAQ DO SUPORTE
