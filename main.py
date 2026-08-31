@@ -16,7 +16,6 @@ from handler import (
     comando_planos,
     comando_privacidade,
     comando_verificar_todas,
-    comando_suporte,
     detalhar_plano,
     conv_cadastro,
     conv_consulta_especifica,
@@ -26,12 +25,6 @@ from handler import (
     iniciar_excluir,
     iniciar_verificar_especifico,
     start,
-    faq_cadastrar,
-    faq_consultar,
-    faq_id,
-    faq_alterar,
-    faq_planos,
-    faq_governo,
 )
 from handler_gestao import (
     selecionar_regulacao_callback,
@@ -55,6 +48,17 @@ from admin import (
     comando_remover_cortesia,
     comando_aviso,
     comando_menu_admin,
+)
+
+# ═══════════════════════════════════════════════════════════════
+# IMPORTS DO SUPORTE
+# ═══════════════════════════════════════════════════════════════
+from suporte import (
+    menu_suporte,
+    exibir_resposta_faq,
+    iniciar_atendimento_20,
+    cancelar_suporte,
+    conv_suporte,
 )
 
 # ═══════════════════════════════════════════════════════════════
@@ -155,7 +159,7 @@ def main():
     app.add_handler(CommandHandler("excluir", iniciar_excluir))
     app.add_handler(CommandHandler("planos", comando_planos))
     app.add_handler(CommandHandler("privacidade", comando_privacidade))
-    app.add_handler(CommandHandler("suporte", comando_suporte))
+    app.add_handler(CommandHandler("suporte", menu_suporte))  # <-- USANDO menu_suporte do suporte.py
 
     # ═══════════════════════════════════════════════════════════════
     # NOVOS COMANDOS — ATENDIMENTO AO CLIENTE
@@ -185,12 +189,7 @@ def main():
     # ═══════════════════════════════════════════════════════════════
     # NOVOS CALLBACKS — FAQ DO SUPORTE
     # ═══════════════════════════════════════════════════════════════
-    app.add_handler(CallbackQueryHandler(faq_cadastrar, pattern="^faq_cadastrar$"))
-    app.add_handler(CallbackQueryHandler(faq_consultar, pattern="^faq_consultar$"))
-    app.add_handler(CallbackQueryHandler(faq_id, pattern="^faq_id$"))
-    app.add_handler(CallbackQueryHandler(faq_alterar, pattern="^faq_alterar$"))
-    app.add_handler(CallbackQueryHandler(faq_planos, pattern="^faq_planos$"))
-    app.add_handler(CallbackQueryHandler(faq_governo, pattern="^faq_governo$"))
+    app.add_handler(CallbackQueryHandler(exibir_resposta_faq, pattern="^faq_"))
 
     # ═══════════════════════════════════════════════════════════════
     # NOVOS CALLBACKS — ATENDIMENTO AO CLIENTE
@@ -201,12 +200,11 @@ def main():
     app.add_handler(CallbackQueryHandler(ver_meus_chamados, pattern="^ver_chamados$"))
     app.add_handler(CallbackQueryHandler(menu_atendimento, pattern="^atendimento_email$"))
     app.add_handler(CallbackQueryHandler(cancelar_atendimento, pattern="^cancelar_atendimento$"))
-    
-    # Handler para processar perguntas do FAQ quando o usuário digita texto
-    app.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, processar_pergunta_faq),
-        group=1
-    )
+
+    # ═══════════════════════════════════════════════════════════════
+    # ADICIONA O CONVERSATION HANDLER DO SUPORTE
+    # ═══════════════════════════════════════════════════════════════
+    app.add_handler(conv_suporte)
 
     # Servidor HTTP auxiliar para o Railway manter a porta aberta e execução via Polling
     PORT = int(os.environ.get("PORT", "8080"))
@@ -229,9 +227,7 @@ def main():
 
     logger.info("Iniciando o bot AlertaSUS via polling...")
     
-    # ═══════════════════════════════════════════════════════════════
-    # CONFIGURA O MENU DE COMANDOS ANTES DE INICIAR O POLLING
-    # ═══════════════════════════════════════════════════════════════
+    # Configura o menu de comandos antes de iniciar o polling
     import asyncio
     asyncio.get_event_loop().run_until_complete(registrar_menu_nativo(app))
     
