@@ -467,9 +467,6 @@ async def configurar_menu_comandos(app):
         BotCommand("privacidade", "🔒 Política de privacidade e LGPD"),
         BotCommand("ajuda", "❓ Central de ajuda e suporte"),
         BotCommand("suporte", "💬 Falar com o suporte"),
-        BotCommand("atendimento", "🤖 Central de Atendimento"),
-        BotCommand("chamados", "📋 Ver Chamados (Admin)"),
-        BotCommand("responder", "💬 Responder Chamado (Admin)"),
     ]
     await app.bot.set_my_commands(comandos)
 
