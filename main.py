@@ -61,6 +61,22 @@ from suporte import (
     conv_suporte,
 )
 
+# ═══════════════════════════════════════════════════════════════
+# IMPORTS DO ATENDIMENTO (NOVO - ADICIONADO)
+# ═══════════════════════════════════════════════════════════════
+from handler_atendimento import (
+    menu_atendimento,
+    iniciar_faq,
+    processar_pergunta_faq,
+    iniciar_atendimento_humanizado,
+    processar_mensagem_humanizado,
+    ver_meus_chamados,
+    comando_ver_chamados,
+    comando_responder_chamado,
+    AGUARDANDO_MENSAGEM_CHAMADO,
+    cancelar_atendimento,
+)
+
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
@@ -137,7 +153,12 @@ def main():
     app.add_handler(CommandHandler("excluir", iniciar_excluir))
     app.add_handler(CommandHandler("planos", comando_planos))
     app.add_handler(CommandHandler("privacidade", comando_privacidade))
-    app.add_handler(CommandHandler("suporte", menu_suporte))  # ✅ USANDO menu_suporte
+    app.add_handler(CommandHandler("suporte", menu_suporte))
+
+    app.add_handler(CommandHandler("atendimento", menu_atendimento))
+    app.add_handler(CommandHandler("faq", iniciar_faq))
+    app.add_handler(CommandHandler("chamados", comando_ver_chamados))
+    app.add_handler(CommandHandler("responder", comando_responder_chamado))
 
     # Comandos Administrativos unificados do admin.py
     app.add_handler(CommandHandler("admin", comando_menu_admin))
@@ -156,17 +177,21 @@ def main():
     app.add_handler(CallbackQueryHandler(comando_planos, pattern="^planos$"))
     app.add_handler(CallbackQueryHandler(start, pattern="^iniciar$"))
 
-    # ═══════════════════════════════════════════════════════════════
-    # CALLBACKS DO SUPORTE
-    # ═══════════════════════════════════════════════════════════════
+    # Callbacks do suporte
     app.add_handler(CallbackQueryHandler(exibir_resposta_faq, pattern="^faq_"))
     app.add_handler(CallbackQueryHandler(iniciar_atendimento_20, pattern="^iniciar_atendimento_20$"))
     app.add_handler(CallbackQueryHandler(cancelar_suporte, pattern="^fechar_menu$"))
     app.add_handler(CallbackQueryHandler(menu_suporte, pattern="^suporte$"))
 
-    # ═══════════════════════════════════════════════════════════════
-    # ADICIONA O CONVERSATION HANDLER DO SUPORTE
-    # ═══════════════════════════════════════════════════════════════
+    # Callbacks do atendimento
+    app.add_handler(CallbackQueryHandler(menu_atendimento, pattern="^atendimento_menu$"))
+    app.add_handler(CallbackQueryHandler(iniciar_faq, pattern="^atendimento_faq$"))
+    app.add_handler(CallbackQueryHandler(iniciar_atendimento_humanizado, pattern="^atendimento_humanizado$"))
+    app.add_handler(CallbackQueryHandler(ver_meus_chamados, pattern="^ver_chamados$"))
+    app.add_handler(CallbackQueryHandler(menu_atendimento, pattern="^atendimento_email$"))
+    app.add_handler(CallbackQueryHandler(cancelar_atendimento, pattern="^cancelar_atendimento$"))
+
+    # Adiciona os ConversationHandlers
     app.add_handler(conv_suporte)
 
     # Servidor HTTP auxiliar para o Railway manter a porta aberta e execução via Polling
