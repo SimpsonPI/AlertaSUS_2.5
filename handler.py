@@ -151,7 +151,7 @@ async def callback_privacidade_voltar(update: Update, context: ContextTypes.DEFA
     
     texto = "Clique no botão abaixo para ler a nossa Política de Privacidade e Termos de Uso:"
     teclado = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔒 Abrir Política de Privacidade e Termos", url="https://seu-site-ou-link-de-privacidade.com")],
+        [InlineKeyboardButton("🔒 Abrir Política de Privacidade e Termos", callback_data="https://seu-site-ou-link-de-privacidade.com")],
         [InlineKeyboardButton("💬 Dúvidas / Suporte (FAQ)", callback_data="abrir_faq_suporte")]
     ])
     
@@ -202,7 +202,7 @@ async def obter_menu_planos(user_id: int) -> InlineKeyboardMarkup:
         keyboard.append([InlineKeyboardButton("🎁 Plano Degustação (Grátis)", callback_data="plano_degustacao")])
     keyboard.append([InlineKeyboardButton("⭐ Plano Trimestral (R$ 9,99)", callback_data="plano_semestral")])
     keyboard.append([InlineKeyboardButton("🚀 Plano Semestral (R$ 14,99)", callback_data="plano_anual")])
-    keyboard.append([InlineKeyboardButton("📧 Email de Suporte", url="mailto:suportealertasus@gmail.com")])
+    keyboard.append([InlineKeyboardButton("📧 Email de Suporte", callback_data="atendimento_email")])
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -303,7 +303,7 @@ async def detalhar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def comando_privacidade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     teclado = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔒 Abrir Política de Privacidade e Termos", url="https://seu-site-ou-link-de-privacidade.com")],
+        [InlineKeyboardButton("🔒 Abrir Política de Privacidade e Termos", callback_data="https://seu-site-ou-link-de-privacidade.com")],
         [InlineKeyboardButton("💬 Dúvidas / Suporte (FAQ)", callback_data="abrir_faq_suporte")]
     ])
     texto = "Clique no botão abaixo para ler a nossa Política de Privacidade e Termos de Uso:"
