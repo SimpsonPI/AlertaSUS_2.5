@@ -11,12 +11,8 @@ from config import (
     CANAL_SUPORTE_ID,
     FUSO_HORARIO,
     MSG_ATENDIMENTO_ENCERRADO,
-    EMAIL_SUPORTE,
-    BOT_SUPORTE_USERNAME,
-    BOT_SUPORTE_LINK,
 )
 
-# Defina o estado caso ele venha do config ou diretamente aqui:
 AGUARDANDO_MENSAGEM = 1
 
 filterwarnings(action="ignore", message=r".*CallbackQueryHandler", category=PTBUserWarning)
@@ -181,41 +177,34 @@ async def atualizar_canal_suporte(context, user_id: int):
 # ==================== MENUS ====================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Comando /start - Menu inicial com botão para suporte"""
+    """Comando /start"""
     texto = (
         "🤖 <b>Bem-vindo ao AlertaSUS 2.0!</b>\n\n"
-        "Este bot monitora e envia informações atualizadas sobre dados de saúde e pesquisas.\n\n"
         "Escolha uma opção abaixo:"
     )
     teclado = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📖 Ajuda / FAQ", callback_data="ajuda")],
-        [InlineKeyboardButton("🎧 Falar com Suporte", callback_data="ir_para_suporte")],  # ← CHAMA CENTRAL DE SUPORTE
+        [InlineKeyboardButton("📖 Central de Atendimento", callback_data="suporte_central")],
+        [InlineKeyboardButton("🎧 Iniciar Atendimento Direto", callback_data="iniciar_atendimento")],
     ])
     
     await update.message.reply_text(texto, parse_mode="HTML", reply_markup=teclado)
 
 
-async def menu_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Menu de ajuda com FAQ - botão para falar com suporte"""
+async def menu_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Menu principal unificado da Central de Atendimento (/suporte)"""
     texto = (
-        "🤖 <b>Central de Ajuda - AlertaSUS</b>\n\n"
-        "Este bot monitora e envia informações atualizadas sobre dados de saúde e pesquisas.\n\n"
-        "• <b>Comandos disponíveis:</b> Use os botões do menu ou digite os filtros por estado.\n"
-        f"• <b>Suporte Técnico:</b> Se encontrar algum erro ou inconsistência, entre em contato pelo e-mail <code>{EMAIL_SUPORTE}</code> ou fale diretamente com nossa equipe pelo bot de atendimento: {BOT_SUPORTE_USERNAME}.\n\n"
-        "Selecione uma opção:\n\n"
-        "1️⃣ Como cadastrar regulação?\n"
-        "2️⃣ Como consultar regulações?\n"
-        "3️⃣ Onde achar Cartão SUS/ID?\n"
-        "4️⃣ Como alterar dados?\n"
-        "5️⃣ Planos e assinatura?"
+        "🎧 <b>Central de Atendimento — AlertaSUS</b>\n\n"
+        "Selecione uma das opções abaixo para tirar suas dúvidas ou obter suporte:"
     )
     teclado = InlineKeyboardMarkup([
-        [InlineKeyboardButton("1️⃣ Cadastrar", callback_data="faq_cadastrar"),
-         InlineKeyboardButton("2️⃣ Consultar", callback_data="faq_consultar")],
-        [InlineKeyboardButton("3️⃣ Cartão SUS/ID", callback_data="faq_id"),
-         InlineKeyboardButton("4️⃣ Alterar Dados", callback_data="faq_alterar")],
-        [InlineKeyboardButton("5️⃣ Planos", callback_data="faq_planos")],
-        [InlineKeyboardButton("💬 Falar com Suporte", callback_data="ir_para_suporte")],  # ← CHAMA CENTRAL DE SUPORTE
+        [InlineKeyboardButton("🎧 Iniciar Atendimento Interno", callback_data="iniciar_atendimento")],
+        [InlineKeyboardButton("🤖 Bot de Atendimento", url="https://t.me/Atendimento_AlertaSUS_2.0")],
+        [InlineKeyboardButton("📧 Enviar E-mail", url="mailto:suportealertasus@gmail.com")],
+        [InlineKeyboardButton("1️⃣ Como cadastrar regulação?", callback_data="faq_cadastrar")],
+        [InlineKeyboardButton("2️⃣ Como consultar regulações?", callback_data="faq_consultar")],
+        [InlineKeyboardButton("3️⃣ Onde achar Cartão SUS/ID?", callback_data="faq_id")],
+        [InlineKeyboardButton("4️⃣ Como alterar dados?", callback_data="faq_alterar")],
+        [InlineKeyboardButton("5️⃣ Planos e assinatura?", callback_data="faq_planos")],
         [InlineKeyboardButton("❌ Fechar", callback_data="fechar_menu")],
     ])
     
@@ -226,32 +215,8 @@ async def menu_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(texto, parse_mode="HTML", reply_markup=teclado)
 
 
-async def menu_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Central de Suporte - Exibe os canais de atendimento (E-mail e Bot)"""
-    texto = (
-        "🛠️ <b>Central de Suporte</b>\n\n"
-        "Precisa de ajuda humana ou encontrou algum problema crítico?\n"
-        "Entre em contato conosco pelos canais oficiais abaixo:\n\n"
-        f"📧 <b>E-mail:</b> <a href=\"mailto:{EMAIL_SUPORTE}\">{EMAIL_SUPORTE}</a>\n"
-        f"🤖 <b>Bot de Atendimento:</b> <a href=\"{BOT_SUPORTE_LINK}\">{BOT_SUPORTE_USERNAME}</a>\n\n"
-        "Nossa equipe responderá em horário comercial."
-    )
-    teclado = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📧 Enviar E-mail", url=f"mailto:{EMAIL_SUPORTE}")],
-        [InlineKeyboardButton("🤖 Abrir Bot de Atendimento", url=BOT_SUPORTE_LINK)],
-        [InlineKeyboardButton("📖 Ver Perguntas Frequentes (FAQ)", callback_data="ajuda")],
-        [InlineKeyboardButton("🏠 Voltar ao Início", callback_data="voltar_inicio")],
-    ])
-    
-    if update.callback_query:
-        await update.callback_query.answer()
-        await update.callback_query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado, disable_web_page_preview=True)
-    else:
-        await update.message.reply_text(texto, parse_mode="HTML", reply_markup=teclado, disable_web_page_preview=True)
-
-
 async def exibir_resposta_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Exibe respostas do FAQ"""
+    """Exibe respostas do FAQ dentro da Central de Atendimento"""
     query = update.callback_query
     await query.answer()
     
@@ -268,25 +233,7 @@ async def exibir_resposta_faq(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     teclado = InlineKeyboardMarkup([
         [InlineKeyboardButton("🎧 Abrir Chamado", callback_data="iniciar_atendimento")],
-        [InlineKeyboardButton("⬅️ Voltar", callback_data="ajuda")],
-    ])
-    
-    await query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
-
-
-async def voltar_inicio(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Volta ao menu inicial (/start)"""
-    query = update.callback_query
-    await query.answer()
-    
-    texto = (
-        "🤖 <b>Bem-vindo ao AlertaSUS 2.0!</b>\n\n"
-        "Este bot monitora e envia informações atualizadas sobre dados de saúde e pesquisas.\n\n"
-        "Escolha uma opção abaixo:"
-    )
-    teclado = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📖 Ajuda / FAQ", callback_data="ajuda")],
-        [InlineKeyboardButton("🎧 Falar com Suporte", callback_data="ir_para_suporte")],
+        [InlineKeyboardButton("⬅️ Voltar para Central", callback_data="suporte_central")],
     ])
     
     await query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
@@ -295,7 +242,7 @@ async def voltar_inicio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==================== FLUXO DO USUÁRIO ====================
 
 async def iniciar_atendimento(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Inicia o atendimento personalizado (chat interno)"""
+    """Inicia o atendimento personalizado"""
     query = update.callback_query
     await query.answer()
     user_id = update.effective_user.id
@@ -363,8 +310,6 @@ async def callback_botoes_canal(update: Update, context: ContextTypes.DEFAULT_TY
             parse_mode="HTML"
         )
         
-        logger.info(f"✍️ Admin {admin_id} está respondendo {user_id}")
-        
         try:
             await query.edit_message_text(
                 text=query.message.text + "\n\n🔄 <i>Admin está digitando uma resposta...</i>",
@@ -403,12 +348,6 @@ async def callback_botoes_canal(update: Update, context: ContextTypes.DEFAULT_TY
             pass
 
 
-async def cancelar_resposta_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    admin_id = update.effective_user.id
-    MODO_RESPOSTA_ADMIN.pop(admin_id, None)
-    await update.message.reply_text("❌ Modo de resposta cancelado.")
-
-
 # ==================== COMANDOS AUXILIARES ====================
 
 async def comando_cadastrar_nova(update, context):
@@ -432,8 +371,6 @@ async def comando_planos(update, context):
 async def comando_privacidade(update, context):
     await update.message.reply_text("🔒 Política de Privacidade no bot principal", parse_mode="HTML")
 
-
-# ==================== PROCESSAMENTO DE MENSAGENS ====================
 
 async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Processa TODAS as mensagens de texto (usuário E admin) de forma unificada"""
@@ -487,7 +424,7 @@ async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if user_id not in HISTORICO_CONVERSA:
         await update.message.reply_text(
             "❌ Você não tem um atendimento ativo.\n\n"
-            "Use /start para iniciar um novo atendimento."
+            "Use /suporte para acessar a Central de Atendimento."
         )
         return
     
@@ -500,25 +437,11 @@ async def processar_mensagem(update: Update, context: ContextTypes.DEFAULT_TYPE)
             pass
 
 
-# ==================== FUNÇÃO PARA RODAPÉ DOS ALERTAS ====================
-
-def obter_rodape_alerta() -> str:
-    """Retorna o rodapé padrão para os alertas automáticos"""
-    return (
-        "\n\n━━━━━━━━━━━━━━━━\n"
-        "🔔 <b>AlertaSUS</b> - Monitoramento de Dados de Saúde\n"
-        f"📧 <b>Contato:</b> {EMAIL_SUPORTE}\n"
-        f"🤖 <b>Atendimento:</b> {BOT_SUPORTE_USERNAME}\n"
-        "💡 <i>Reporte falsos positivos ou falhas pelo bot de atendimento</i>"
-    )
-
-
 # ==================== HANDLERS ====================
 
 handlers = [
-    # Comandos
+    # Comandos (Apenas /suporte como central unificada)
     CommandHandler("start", start),
-    CommandHandler("ajuda", menu_ajuda),
     CommandHandler("suporte", menu_suporte),
     CommandHandler("cadastrar_nova", comando_cadastrar_nova),
     CommandHandler("verificar_todos", comando_verificar_todos),
@@ -528,12 +451,10 @@ handlers = [
     CommandHandler("planos", comando_planos),
     CommandHandler("privacidade", comando_privacidade),
     
-    # Callbacks dos menus
+    # Callbacks dos menus unificados
     CallbackQueryHandler(exibir_resposta_faq, pattern="^faq_"),
+    CallbackQueryHandler(menu_suporte, pattern="^suporte_central$"),
     CallbackQueryHandler(iniciar_atendimento, pattern="^iniciar_atendimento$"),
-    CallbackQueryHandler(menu_ajuda, pattern="^ajuda$"),
-    CallbackQueryHandler(menu_suporte, pattern="^ir_para_suporte$"),  # ← "🎧 Falar com Suporte" chama Central de Suporte
-    CallbackQueryHandler(voltar_inicio, pattern="^voltar_inicio$"),
     CallbackQueryHandler(cancelar_atendimento_usuario, pattern="^fechar_menu$"),
     CallbackQueryHandler(cancelar_atendimento_usuario, pattern="^usuario_sair$"),
     

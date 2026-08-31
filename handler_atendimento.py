@@ -281,6 +281,10 @@ async def processar_mensagem_humanizado(update: Update, context: ContextTypes.DE
 # CANCELAR ATENDIMENTO  <-- ADICIONADO
 # ==========================================
 
+# ==========================================
+# CANCELAR ATENDIMENTO
+# ==========================================
+
 async def cancelar_atendimento(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Cancela o atendimento humanizado."""
     
@@ -485,6 +489,6 @@ __all__ = [
     "ver_meus_chamados",
     "comando_ver_chamados",
     "comando_responder_chamado",
-    "cancelar_atendimento",  # <-- ADICIONADO
+    "cancelar_atendimento",
     "AGUARDANDO_MENSAGEM_CHAMADO"
 ]
