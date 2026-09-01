@@ -206,7 +206,7 @@ def main():
 
     # Atualiza o menu de comandos antes de iniciar o polling
     import asyncio
-    asyncio.get_event_loop().run_until_complete(configurar_menu_comandos(app))
+    asyncio.run(configurar_menu_comandos(app))
 
     # Agenda a verificação de vencimento a cada 6 horas
     job_queue = app.job_queue
