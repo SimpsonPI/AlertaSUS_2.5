@@ -261,7 +261,7 @@ async def comando_remover_cortesia(update: Update, context: ContextTypes.DEFAULT
 
 
 async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Retira o plano pago de um usuário (volta para degustação ou sem plano)."""
+    """Retira o plano pago de um usuário (volta para gratuito)."""
     user = update.effective_user
     if not eh_admin(user.id):
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
@@ -280,12 +280,12 @@ async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TY
             return
 
         supabase.table("assinaturas").update({
-            "tipo_plano": "sem_plano",
-            "status": "expirado",
+            "tipo_plano": "gratuito",
+            "status": "ativo",
             "data_vencimento": None
         }).eq("chat_id", str(target_id)).execute()
 
-        await update.message.reply_text(f"✅ Plano retirado do usuário {target_id}.")
+        await update.message.reply_text(f"✅ Plano retirado do usuário {target_id}. Plano atual: Gratuito.")
     except Exception as e:
         await update.message.reply_text(f"❌ Erro ao retirar plano: {e}")
 
@@ -308,15 +308,15 @@ async def comando_retirar_degustacao(update: Update, context: ContextTypes.DEFAU
         if not res.data:
             supabase.table("assinaturas").insert({
                 "chat_id": str(target_id),
-                "tipo_plano": "sem_plano",
-                "status": "expirado",
+                "tipo_plano": "gratuito",
+                "status": "ativo",
                 "usou_degustacao": True
             }).execute()
         else:
             supabase.table("assinaturas").update({
                 "usou_degustacao": True,
-                "status": "expirado",
-                "tipo_plano": "sem_plano"
+                "tipo_plano": "gratuito",
+                "status": "ativo"
             }).eq("chat_id", str(target_id)).execute()
 
         await update.message.reply_text(f"✅ Degustação retirada do usuário {target_id}.")
