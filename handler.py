@@ -465,11 +465,9 @@ async def configurar_menu_comandos(app):
         BotCommand("planos", "💳 Ver planos e assinaturas"),
         BotCommand("excluir", "🗑️ Excluir uma regulação"),
         BotCommand("privacidade", "🔒 Política de privacidade e LGPD"),
-        BotCommand("ajuda", "❓ Central de ajuda e suporte"),
-        BotCommand("suporte", "💬 Falar com o suporte"),
+        BotCommand("suporte", "🤖 Central de Atendimento"),
     ]
     await app.bot.set_my_commands(comandos)
-
 
 # --- CONVERSATION HANDLERS ---
 conv_consulta_especifica = ConversationHandler(
