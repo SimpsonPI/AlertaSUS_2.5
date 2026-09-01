@@ -22,8 +22,8 @@ def calcular_dias_plano(tipo_plano: str) -> int:
     plano_lower = tipo_plano.lower()
     if "degustacao" in plano_lower or "free" in plano_lower:
         return 7
-    elif "mensal" in plano_lower or "essencial" in plano_lower:
-        return 30
+    elif "trimestral" in plano_lower:
+        return 90
     elif "semestral" in plano_lower:
         return 180
     elif "anual" in plano_lower:

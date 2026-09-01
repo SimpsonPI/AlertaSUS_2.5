@@ -218,8 +218,20 @@ def main():
     # Configura o menu de comandos antes de iniciar o polling
     import asyncio
     asyncio.get_event_loop().run_until_complete(registrar_menu_nativo(app))
-    
-    app.run_polling(drop_pending_updates=True)
 
-if __name__ == "__main__":
-    main()
+    # Configura uma tarefa que roda a cada 6 horas (por exemplo)
+    from telegram.ext import JobQueue
+    import asyncio
+
+    async def job_vencimento(context):
+        await verificar_vencimentos(context.application)
+
+    # Agendar a verificação
+    job_queue = app.job_queue
+    if job_queue:
+        job_queue.run_repeating(job_vencimento, interval=3600*6, first=30)  # a cada 6 horas
+        
+        app.run_polling(drop_pending_updates=True)
+
+    if __name__ == "__main__":
+        main()

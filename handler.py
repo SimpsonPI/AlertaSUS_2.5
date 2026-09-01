@@ -200,8 +200,8 @@ async def obter_menu_planos(user_id: int) -> InlineKeyboardMarkup:
     keyboard = []
     if not ja_usou_degustacao:
         keyboard.append([InlineKeyboardButton("🎁 Plano Degustação (Grátis)", callback_data="plano_degustacao")])
-    keyboard.append([InlineKeyboardButton("⭐ Plano Trimestral (R$ 9,99)", callback_data="plano_semestral")])
-    keyboard.append([InlineKeyboardButton("🚀 Plano Semestral (R$ 14,99)", callback_data="plano_anual")])
+    keyboard.append([InlineKeyboardButton("⭐ Plano Trimestral (R$ 9,99)", callback_data="plano_trimestral")])
+    keyboard.append([InlineKeyboardButton("🚀 Plano Semestral (R$ 14,99)", callback_data="plano_semestral")])
     keyboard.append([InlineKeyboardButton("📧 Email de Suporte", callback_data="atendimento_email")])
     return InlineKeyboardMarkup(keyboard)
 
@@ -278,7 +278,7 @@ async def detalhar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         texto = "🎁 <b>Plano Degustação Ativado!</b>\n\nSeu período de teste gratuito já está funcionando (até 2 regulações)."
         keyboard_botoes = [[InlineKeyboardButton("⚡ Ver Planos Pro", callback_data="planos")]]
-    elif data == "plano_trimestral":
+        elif data == "plano_trimestral":
         texto = "⭐ <b>Plano Trimestral</b>\n\n• Até 5 regulações.\n<b>Valor:</b> R$ 9,99 / trimestre"
         keyboard_botoes = [
             [InlineKeyboardButton("💳 Pagar via Pix", callback_data="pix_pro_trimestral")],

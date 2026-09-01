@@ -206,3 +206,44 @@ async def detalhar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(keyboard_botoes),
     )
+
+    async def verificar_vencimentos(app):
+    """Verifica assinaturas que vencem em 1 dia e envia alerta."""
+    from datetime import datetime, timedelta, timezone
+    import asyncio
+    
+    agora = datetime.now(timezone.utc)
+    alvo = agora + timedelta(days=1)  # vence em 1 dia
+    
+    try:
+        # Busca assinaturas ativas que ainda não expiraram
+        res = supabase.table("assinaturas").select("*").eq("status", "active").execute()
+        for assinatura in res.data:
+            venc = assinatura.get("data_vencimento")
+            if not venc:
+                continue
+            venc_dt = datetime.fromisoformat(venc.replace("Z", "+00:00"))
+            # Se faltar exatamente 1 dia (ou menos) para vencer
+            if venc_dt <= alvo and venc_dt > agora:
+                chat_id = assinatura["chat_id"]
+                tipo = assinatura.get("tipo_plano", "")
+                # Mensagem personalizada
+                if tipo == "degustacao":
+                    msg = "⚠️ Seu plano degustação expira amanhã! Aproveite e assine um plano Pro para continuar monitorando suas regulações."
+                else:
+                    msg = "⚠️ Seu plano Pro expira amanhã! Renove para não perder o acesso."
+                
+                teclado = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("💳 Ver Planos", callback_data="planos")]
+                ])
+                try:
+                    await app.bot.send_message(
+                        chat_id=chat_id,
+                        text=msg,
+                        reply_markup=teclado,
+                        parse_mode="HTML"
+                    )
+                except Exception as e:
+                    logger.error(f"Erro ao enviar alerta para {chat_id}: {e}")
+    except Exception as e:
+        logger.error(f"Erro na verificação de vencimentos: {e}")
