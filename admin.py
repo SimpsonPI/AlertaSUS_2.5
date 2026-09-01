@@ -29,36 +29,27 @@ def eh_admin(user_id: int) -> bool:
 
 
 async def comando_estatisticas(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Exibe estatísticas gerais do bot e do banco de dados."""
-    user = update.effective_user
-    if not eh_admin(user.id):
-        await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
-        return
+    """Visão geral de usuários, planos e cadastros de regulações."""
+    # Contagem de usuários (assinaturas)
+    res_assinaturas = supabase.table("assinaturas").select("*", count="exact").execute()
+    total_assinaturas = res_assinaturas.count if hasattr(res_assinaturas, 'count') else len(res_assinaturas.data)
 
-    try:
-        response = supabase.table("assinaturas").select("tipo_plano", count="exact").execute()
-        total_usuarios = response.count or 0
-        
-        dados = supabase.table("assinaturas").select("tipo_plano").execute().data
-        
-        contador_planos = {}
-        for row in dados:
-            plano = row.get("tipo_plano", "desconhecido")
-            contador_planos[plano] = contador_planos.get(plano, 0) + 1
+    # Contagem de planos ativos
+    res_ativos = supabase.table("assinaturas").select("tipo_plano", count="exact").eq("status", "active").execute()
+    total_ativos = res_ativos.count if hasattr(res_ativos, 'count') else len(res_ativos.data)
 
-        texto_stats = (
-            "📊 <b>Estatísticas Operacionais - AlertaSUS 2.0</b>\n\n"
-            f"👥 <b>Total de registros na base:</b> {total_usuarios}\n\n"
-            "📋 <b>Distribuição por Planos:</b>\n"
-        )
-        for plano, qtd in contador_planos.items():
-            texto_stats += f"• {plano.capitalize()}: <code>{qtd}</code>\n"
+    # Contagem de cadastros de regulações (IDs de regulação)
+    res_regulacoes = supabase.table("AlertaSUS_2.0").select("*", count="exact").execute()
+    total_regulacoes = res_regulacoes.count if hasattr(res_regulacoes, 'count') else len(res_regulacoes.data)
 
-        await update.message.reply_text(texto_stats, parse_mode="HTML")
+    texto = (
+        "📊 <b>ESTATÍSTICAS GERAIS</b>\n\n"
+        f"👥 <b>Total de Usuários (assinaturas):</b> {total_assinaturas}\n"
+        f"✅ <b>Assinaturas Ativas:</b> {total_ativos}\n"
+        f"📋 <b>Total de Cadastros de Regulação:</b> {total_regulacoes}\n"
+    )
 
-    except Exception as e:
-        logger.error(f"[ADMIN] Erro ao buscar estatísticas: {e}")
-        await update.message.reply_text("❌ Erro ao consultar estatísticas no banco de dados.")
+    await update.message.reply_text(texto, parse_mode="HTML")
 
 
 async def comando_listar_ativos(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -320,30 +311,84 @@ async def comando_aviso(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"[ADMIN] Erro no broadcast: {e}")
         await update.message.reply_text(f"❌ Erro ao executar o envio em massa: {e}")
 
-
-async def comando_menu_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Exibe o painel de controle administrativo com todos os comandos disponíveis."""
-    user = update.effective_user
-    if not eh_admin(user.id):
-        await update.message.reply_text("❌ Você não tem permissão para acessar o painel administrativo.")
+async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Retira o plano pago de um usuário (volta para degustação ou sem plano)."""
+    if not context.args:
+        await update.message.reply_text("⚠️ Uso correto: /retirar_plano <ID>")
         return
 
-    texto_menu = (
-        "🛠️ <b>PAINEL DE CONTROLE ADMINISTRATIVO</b>\n"
-        "<i>AlertaSUS 2.0 - Central de Operações</i>\n\n"
+    target_id = context.args[0].strip()
+
+    try:
+        # Verifica se o usuário tem uma assinatura ativa
+        res = supabase.table("assinaturas").select("*").eq("chat_id", str(target_id)).execute()
+        if not res.data:
+            await update.message.reply_text("❌ Usuário não encontrado ou sem assinatura.")
+            return
+
+        # Define o plano como degustação (ou sem plano, dependendo da regra)
+        # Aqui, vou reverter para 'degustacao' se já não tiver usado, caso contrário, deixa sem plano
+        # Vamos usar 'sem_plano' ou apenas remover o registro? 
+        # Para simplificar, vou atualizar para status 'expirado' e tipo_plano 'sem_plano'
+        supabase.table("assinaturas").update({
+            "tipo_plano": "sem_plano",
+            "status": "expirado",
+            "data_vencimento": None
+        }).eq("chat_id", str(target_id)).execute()
+
+        await update.message.reply_text(f"✅ Plano retirado do usuário {target_id}.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Erro ao retirar plano: {e}")
+
+
+async def comando_retirar_degustacao(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Retira o acesso à degustação de um usuário (impede de usar novamente)."""
+    if not context.args:
+        await update.message.reply_text("⚠️ Uso correto: /retirar_degustacao <ID>")
+        return
+
+    target_id = context.args[0].strip()
+
+    try:
+        # Marca que o usuário já usou a degustação, impedindo novos usos
+        res = supabase.table("assinaturas").select("*").eq("chat_id", str(target_id)).execute()
+        if not res.data:
+            # Se não existe assinatura, cria um registro bloqueado
+            supabase.table("assinaturas").insert({
+                "chat_id": str(target_id),
+                "tipo_plano": "sem_plano",
+                "status": "expirado",
+                "usou_degustacao": True
+            }).execute()
+        else:
+            supabase.table("assinaturas").update({
+                "usou_degustacao": True,
+                "status": "expirado",
+                "tipo_plano": "sem_plano"
+            }).eq("chat_id", str(target_id)).execute()
+
+        await update.message.reply_text(f"✅ Degustação retirada do usuário {target_id}.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Erro ao retirar degustação: {e}")
+
+async def comando_menu_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    texto = (
+        "🎛️ <b>PAINEL DE CONTROLE ADMINISTRATIVO</b>\n"
+        "AlertaSUS 2.0 - Central de Operações\n\n"
         "Selecione ou utilize um dos comandos abaixo para gerenciar o bot:\n\n"
         "📊 <b>Relatórios e Dados:</b>\n"
-        "• /estatisticas - Visão geral de usuários e planos\n"
+        "• /estatisticas - Visão geral de usuários, planos e cadastros\n"
         "• /ativos - Lista as últimas assinaturas ativas\n"
-        "• /detalhes &lt;ID&gt; - Mostra dados completos de um usuário\n\n"
-        "🎁 <b>Gestão de Planos e Acessos:</b>\n"
-        "• /cortesia &lt;ID&gt; - Concede acesso ilimitado/VIP\n"
-        "• /remover_cortesia &lt;ID&gt; - Retira cortesia e volta para degustação\n"
-        "• /dar_plano &lt;ID&gt; &lt;plano&gt; &lt;dias&gt; - Concede plano com validade\n\n"
+        "• /detalhes <ID> - Mostra dados completos de um usuário\n\n"
+        "👑 <b>Gestão de Planos e Acessos:</b>\n"
+        "• /cortesia <ID> - Concede acesso ilimitado/VIP\n"
+        "• /remover_cortesia <ID> - Retira cortesia e volta para degustação\n"
+        "• /dar_plano <ID> <plano> <dias> - Concede plano com validade\n"
+        "• /retirar_plano <ID> - Retira plano pago (volta para degustação ou sem plano)\n"
+        "• /retirar_degustacao <ID> - Retira acesso à degustação\n\n"
         "🛡️ <b>Segurança e Comunicação:</b>\n"
-        "• /bloquear &lt;ID&gt; - Bloqueia o acesso de um usuário\n"
-        "• /aviso &lt;mensagem&gt; - Dispara broadcast para toda a base\n\n"
-        "💡 <i>Dica: Você pode digitar o comando diretamente na barra de mensagens.</i>"
+        "• /bloquear <ID> - Bloqueia o acesso de um usuário\n"
+        "• /aviso <mensagem> - Dispara broadcast para toda a base\n\n"
+        "💡 <i>Dica: Pode digitar o comando diretamente na barra de mensagens.</i>"
     )
-
-    await update.message.reply_text(texto_menu, parse_mode="HTML")
+    # ... (mantenha o resto da função que envia o texto)

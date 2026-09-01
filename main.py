@@ -49,6 +49,8 @@ from admin import (
     comando_remover_cortesia,
     comando_aviso,
     comando_menu_admin,
+    comando_retirar_plano,
+    comando_retirar_degustacao,
 )
 
 # Imports do suporte
@@ -168,6 +170,8 @@ def main():
     app.add_handler(CommandHandler("remover_cortesia", comando_remover_cortesia))
     app.add_handler(CommandHandler("bloquear", comando_bloquear))
     app.add_handler(CommandHandler("aviso", comando_aviso))
+    app.add_handler(CommandHandler("retirar_plano", comando_retirar_plano))
+    app.add_handler(CommandHandler("retirar_degustacao", comando_retirar_degustacao))
 
     app.add_handler(CallbackQueryHandler(detalhar_plano, pattern="^plano_"))
     app.add_handler(CallbackQueryHandler(gerar_pagamento_pix, pattern="^pix_"))
