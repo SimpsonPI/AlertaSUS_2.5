@@ -278,18 +278,21 @@ async def detalhar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         texto = "🎁 <b>Plano Degustação Ativado!</b>\n\nSeu período de teste gratuito já está funcionando (até 2 regulações)."
         keyboard_botoes = [[InlineKeyboardButton("⚡ Ver Planos Pro", callback_data="planos")]]
-        elif data == "plano_trimestral":
+
+    elif data == "plano_trimestral":
         texto = "⭐ <b>Plano Trimestral</b>\n\n• Até 5 regulações.\n<b>Valor:</b> R$ 9,99 / trimestre"
         keyboard_botoes = [
             [InlineKeyboardButton("💳 Pagar via Pix", callback_data="pix_pro_trimestral")],
             [InlineKeyboardButton("⬅️ Voltar aos Planos", callback_data="planos")],
         ]
+
     elif data == "plano_semestral":
         texto = "🚀 <b>Plano Semestral</b>\n\n• Até 9 regulações.\n<b>Valor:</b> R$ 14,99 / semestre"
         keyboard_botoes = [
             [InlineKeyboardButton("💳 Pagar via Pix", callback_data="pix_pro_semestral")],
             [InlineKeyboardButton("⬅️ Voltar aos Planos", callback_data="planos")],
         ]
+
     else:
         texto = "Opção inválida."
         keyboard_botoes = [[InlineKeyboardButton("⬅️ Voltar", callback_data="planos")]]
