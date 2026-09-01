@@ -25,7 +25,7 @@ from handler import (
     iniciar_excluir,
     iniciar_verificar_especifico,
     start,
-    configurar_menu_comandos,  # <-- IMPORTANTE: Importando a função
+    configurar_menu_comandos,
 )
 from handler_gestao import (
     selecionar_regulacao_callback,
@@ -51,9 +51,7 @@ from admin import (
     comando_menu_admin,
 )
 
-# ═══════════════════════════════════════════════════════════════
-# IMPORTS DO SUPORTE
-# ═══════════════════════════════════════════════════════════════
+# Imports do suporte
 from suporte import (
     menu_suporte,
     exibir_resposta_faq,
@@ -71,29 +69,26 @@ logger = logging.getLogger(__name__)
 async def erro_global_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error(msg="Exceção capturada pelo bot:", exc_info=context.error)
 
-    async def verificar_vencimentos(app):
+async def verificar_vencimentos(app):
     """Verifica assinaturas que vencem em 1 dia e envia alerta."""
     from datetime import datetime, timedelta, timezone
     from telegram import InlineKeyboardMarkup, InlineKeyboardButton
     from database import supabase
 
     agora = datetime.now(timezone.utc)
-    alvo = agora + timedelta(days=1)  # vence em 1 dia
+    alvo = agora + timedelta(days=1)
 
     try:
-        # Busca assinaturas ativas que ainda não expiraram
         res = supabase.table("assinaturas").select("*").eq("status", "active").execute()
         for assinatura in res.data:
             venc = assinatura.get("data_vencimento")
             if not venc:
                 continue
             venc_dt = datetime.fromisoformat(venc.replace("Z", "+00:00"))
-            # Se faltar exatamente 1 dia (ou menos) para vencer e ainda não passou
             if venc_dt <= alvo and venc_dt > agora:
                 chat_id = assinatura["chat_id"]
                 tipo = assinatura.get("tipo_plano", "").lower()
 
-                # Mensagem personalizada
                 if tipo == "degustacao":
                     msg = (
                         "⚠️ <b>Seu plano degustação expira amanhã!</b>\n\n"
@@ -133,7 +128,6 @@ def main():
     app = ApplicationBuilder().token(token).build()
     app.add_error_handler(erro_global_handler)
 
-    # Configuração dos handlers (mantida como estava)
     conv_corrigir = ConversationHandler(
         entry_points=[
             CommandHandler("corrigir", iniciar_corrigir),
@@ -152,7 +146,6 @@ def main():
     app.add_handler(conv_corrigir)
     app.add_handler(conv_excluir)
 
-    # Comandos principais
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("iniciar", start))
     app.add_handler(CommandHandler("menu", start))
@@ -165,7 +158,6 @@ def main():
     app.add_handler(CommandHandler("privacidade", comando_privacidade))
     app.add_handler(CommandHandler("suporte", menu_suporte))
 
-    # Comandos administrativos
     app.add_handler(CommandHandler("admin", comando_menu_admin))
     app.add_handler(CommandHandler("menu_admin", comando_menu_admin))
     app.add_handler(CommandHandler("estatisticas", comando_estatisticas))
@@ -177,7 +169,6 @@ def main():
     app.add_handler(CommandHandler("bloquear", comando_bloquear))
     app.add_handler(CommandHandler("aviso", comando_aviso))
 
-    # Callbacks
     app.add_handler(CallbackQueryHandler(detalhar_plano, pattern="^plano_"))
     app.add_handler(CallbackQueryHandler(gerar_pagamento_pix, pattern="^pix_"))
     app.add_handler(CallbackQueryHandler(comando_planos, pattern="^planos$"))
@@ -187,10 +178,8 @@ def main():
     app.add_handler(CallbackQueryHandler(cancelar_suporte, pattern="^fechar_menu$"))
     app.add_handler(CallbackQueryHandler(menu_suporte, pattern="^suporte$"))
 
-    # Adiciona o ConversationHandler do suporte
     app.add_handler(conv_suporte)
 
-    # Servidor HTTP auxiliar (para o Railway)
     PORT = int(os.environ.get("PORT", "8080"))
     
     import threading
@@ -210,43 +199,22 @@ def main():
     logger.info(f"Servidor HTTP auxiliar rodando na porta {PORT}")
 
     logger.info("Iniciando o bot AlertaSUS via polling...")
-    
-    # ═══════════════════════════════════════════════════════════════
-    # CHAMADA DA FUNÇÃO PARA ATUALIZAR O MENU ANTES DE INICIAR O POLLING
-    # ═══════════════════════════════════════════════════════════════
+
+    # Atualiza o menu de comandos antes de iniciar o polling
     import asyncio
- HEAD
-asyncio.get_event_loop().run_until_complete(registrar_menu_nativo(app))
+    asyncio.get_event_loop().run_until_complete(configurar_menu_comandos(app))
 
-asyncio.get_event_loop().run_until_complete(configurar_menu_comandos(app))
-    
-app.run_polling(drop_pending_updates=True)
-134f1a4cb50cdfdbf5565205e0bfb17d7791822a
-
-    # Configura uma tarefa que roda a cada 6 horas (por exemplo)
-from telegram.ext import JobQueue
-import asyncio
-
-async def job_vencimento(context):
-        await verificar_vencimentos(context.application)
-
-    # Agendar a verificação
-job_queue = app.job_queue
-if job_queue:
-        job_queue.run_repeating(job_vencimento, interval=3600*6, first=30)  # a cada 6 horas
-
-    # Configura a verificação de vencimento a cada 6 horas
-from telegram.ext import JobQueue
-job_queue = app.job_queue
-if job_queue:
+    # Agenda a verificação de vencimento a cada 6 horas
+    job_queue = app.job_queue
+    if job_queue:
         job_queue.run_repeating(
             lambda _: asyncio.create_task(verificar_vencimentos(app)),
-            interval=6 * 3600,  # 6 horas em segundos
-            first=60  # primeira execução após 60 segundos
+            interval=6 * 3600,
+            first=60
         )
         logger.info("Verificação de vencimentos agendada (a cada 6 horas)")
-        
-        app.run_polling(drop_pending_updates=True)
+
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
-        main()
+    main()
