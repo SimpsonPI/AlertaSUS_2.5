@@ -261,7 +261,7 @@ async def comando_remover_cortesia(update: Update, context: ContextTypes.DEFAULT
 
 
 async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Retira o plano de um usuário, deixando-o como novo (sem registro)."""
+    """Retira o plano de um usuário, deixando-o neutro (sem plano ativo, mas mantendo o registro)."""
     user = update.effective_user
     if not eh_admin(user.id):
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
@@ -277,16 +277,22 @@ async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TY
         # Verifica se existe registro
         res = supabase.table("assinaturas").select("*").eq("chat_id", str(target_id)).execute()
         if not res.data:
-            await update.message.reply_text("ℹ️ Este usuário não possui registro de assinatura (já está neutro).")
+            await update.message.reply_text("ℹ️ Usuário não encontrado no banco de assinaturas.")
             return
 
-        # Remove completamente o registro (volta a ser usuário novo)
-        supabase.table("assinaturas").delete().eq("chat_id", str(target_id)).execute()
+        # Atualiza o registro para estado neutro (status e tipo_plano nulos, sem validade)
+        supabase.table("assinaturas").update({
+            "tipo_plano": None,
+            "status": None,
+            "data_inicio": None,
+            "data_vencimento": None,
+            "limite_ids": None,
+            "usou_degustacao": False  # Permite que ele use a degustação novamente, se desejar
+        }).eq("chat_id", str(target_id)).execute()
 
-        await update.message.reply_text(f"✅ Plano retirado do usuário {target_id}. Agora ele está como um usuário novo (neutro).")
+        await update.message.reply_text(f"✅ Plano retirado do usuário {target_id}. Status agora é neutro.")
     except Exception as e:
         await update.message.reply_text(f"❌ Erro ao retirar plano: {e}")
-
 async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Retira o plano de um usuário, deixando-o neutro (sem plano ativo, mas mantendo o registro)."""
     user = update.effective_user
