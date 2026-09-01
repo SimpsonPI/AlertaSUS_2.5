@@ -236,29 +236,44 @@ async def comando_cortesia(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Erro ao conceder cortesia: {e}")
 
 
-async def comando_remover_cortesia(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Remove a cortesia de um usuário."""
+async def comando_retirar_degustacao(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Retira o acesso à degustação de um usuário (impede de usar novamente)."""
     user = update.effective_user
     if not eh_admin(user.id):
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
         return
 
     if not context.args:
-        await update.message.reply_text("⚠️ <b>Uso correto:</b> <code>/remover_cortesia &lt;TELEGRAM_ID&gt;</code>", parse_mode="HTML")
+        await update.message.reply_text("⚠️ Uso correto: /retirar_degustacao <ID>")
         return
 
     target_id = context.args[0].strip()
+
     try:
-        supabase.table("assinaturas").update({
-            "tipo_plano": "gratuito",
-            "status": "ativo"
-        }).eq("chat_id", str(target_id)).execute()
+        # Verifica se existe registro
+        res = supabase.table("assinaturas").select("*").eq("chat_id", str(target_id)).execute()
+        if not res.data:
+            # Cria registro neutro com trava de degustação
+            supabase.table("assinaturas").insert({
+                "chat_id": str(target_id),
+                "tipo_plano": None,
+                "status": None,
+                "usou_degustacao": True
+            }).execute()
+        else:
+            # Atualiza para neutro e trava degustação
+            supabase.table("assinaturas").update({
+                "usou_degustacao": True,
+                "tipo_plano": None,
+                "status": None,
+                "data_inicio": None,
+                "data_vencimento": None,
+                "limite_ids": None
+            }).eq("chat_id", str(target_id)).execute()
 
-        await update.message.reply_text(f"ℹ️ Cortesia removida do ID <code>{target_id}</code>.", parse_mode="HTML")
+        await update.message.reply_text(f"✅ Degustação retirada do usuário {target_id}. Usuário agora está neutro.")
     except Exception as e:
-        logger.error(f"[ADMIN] Erro ao remover cortesia: {e}")
-        await update.message.reply_text(f"❌ Erro ao remover cortesia: {e}")
-
+        await update.message.reply_text(f"❌ Erro ao retirar degustação: {e}")
 
 async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Retira o plano de um usuário, deixando-o neutro (sem plano ativo, mas mantendo trava de degustação)."""
