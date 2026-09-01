@@ -381,7 +381,6 @@ async def comando_menu_admin(update: Update, context: ContextTypes.DEFAULT_TYPE)
     """Exibe o painel de controle administrativo."""
     user = update.effective_user
 
-    # Verifica se é administrador (adicionando log)
     if user.id not in ADMIN_IDS:
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
         return
@@ -393,16 +392,16 @@ async def comando_menu_admin(update: Update, context: ContextTypes.DEFAULT_TYPE)
         "📊 <b>Relatórios e Dados:</b>\n"
         "• /estatisticas - Visão geral de usuários, planos e cadastros\n"
         "• /ativos - Lista as últimas assinaturas ativas\n"
-        "• /detalhes <ID> - Mostra dados completos de um usuário\n\n"
+        "• /detalhes &lt;ID&gt; - Mostra dados completos de um usuário\n\n"
         "👑 <b>Gestão de Planos e Acessos:</b>\n"
-        "• /cortesia <ID> - Concede acesso ilimitado/VIP\n"
-        "• /remover_cortesia <ID> - Retira cortesia e volta para degustação\n"
-        "• /dar_plano <ID> <plano> <dias> - Concede plano com validade\n"
-        "• /retirar_plano <ID> - Retira plano pago (volta para degustação ou sem plano)\n"
-        "• /retirar_degustacao <ID> - Retira acesso à degustação\n\n"
+        "• /cortesia &lt;ID&gt; - Concede acesso ilimitado/VIP\n"
+        "• /remover_cortesia &lt;ID&gt; - Retira cortesia e volta para degustação\n"
+        "• /dar_plano &lt;ID&gt; &lt;plano&gt; &lt;dias&gt; - Concede plano com validade\n"
+        "• /retirar_plano &lt;ID&gt; - Retira plano pago (volta para degustação ou sem plano)\n"
+        "• /retirar_degustacao &lt;ID&gt; - Retira acesso à degustação\n\n"
         "🛡️ <b>Segurança e Comunicação:</b>\n"
-        "• /bloquear <ID> - Bloqueia o acesso de um usuário\n"
-        "• /aviso <mensagem> - Dispara broadcast para toda a base\n\n"
+        "• /bloquear &lt;ID&gt; - Bloqueia o acesso de um usuário\n"
+        "• /aviso &lt;mensagem&gt; - Dispara broadcast para toda a base\n\n"
         "💡 <i>Dica: Pode digitar o comando diretamente na barra de mensagens.</i>"
     )
 
