@@ -293,15 +293,16 @@ async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text(f"✅ Plano retirado do usuário {target_id}. Status agora é neutro.")
     except Exception as e:
         await update.message.reply_text(f"❌ Erro ao retirar plano: {e}")
-async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Retira o plano de um usuário, deixando-o neutro (sem plano ativo, mas mantendo o registro)."""
+        
+async def comando_retirar_degustacao(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Retira o acesso à degustação de um usuário (impede de usar novamente)."""
     user = update.effective_user
     if not eh_admin(user.id):
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
         return
 
     if not context.args:
-        await update.message.reply_text("⚠️ Uso correto: /retirar_plano <ID>")
+        await update.message.reply_text("⚠️ Uso correto: /retirar_degustacao <ID>")
         return
 
     target_id = context.args[0].strip()
@@ -310,23 +311,24 @@ async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TY
         # Verifica se existe registro
         res = supabase.table("assinaturas").select("*").eq("chat_id", str(target_id)).execute()
         if not res.data:
-            await update.message.reply_text("ℹ️ Usuário não encontrado no banco de assinaturas.")
-            return
+            # Se não existe, cria um registro neutro com a trava de degustação
+            supabase.table("assinaturas").insert({
+                "chat_id": str(target_id),
+                "tipo_plano": None,
+                "status": None,
+                "usou_degustacao": True
+            }).execute()
+        else:
+            # Atualiza o registro para neutro e impede nova degustação
+            supabase.table("assinaturas").update({
+                "usou_degustacao": True,
+                "tipo_plano": None,
+                "status": None
+            }).eq("chat_id", str(target_id)).execute()
 
-        # Atualiza o registro para estado neutro (status e tipo_plano nulos, sem validade)
-        supabase.table("assinaturas").update({
-            "tipo_plano": None,
-            "status": None,
-            "data_inicio": None,
-            "data_vencimento": None,
-            "limite_ids": None,
-            "usou_degustacao": False  # Permite que ele use a degustação novamente, se desejar
-        }).eq("chat_id", str(target_id)).execute()
-
-        await update.message.reply_text(f"✅ Plano retirado do usuário {target_id}. Status agora é neutro.")
+        await update.message.reply_text(f"✅ Degustação retirada do usuário {target_id}.")
     except Exception as e:
-        await update.message.reply_text(f"❌ Erro ao retirar plano: {e}")
-
+        await update.message.reply_text(f"❌ Erro ao retirar degustação: {e}")
 async def comando_aviso(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Envia uma mensagem de broadcast (aviso em massa) para todos os usuários cadastrados."""
     user = update.effective_user
