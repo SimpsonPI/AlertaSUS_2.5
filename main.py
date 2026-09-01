@@ -215,30 +215,30 @@ def main():
     # CHAMADA DA FUNÇÃO PARA ATUALIZAR O MENU ANTES DE INICIAR O POLLING
     # ═══════════════════════════════════════════════════════════════
     import asyncio
-<<<<<<< HEAD
-    asyncio.get_event_loop().run_until_complete(registrar_menu_nativo(app))
-=======
-    asyncio.get_event_loop().run_until_complete(configurar_menu_comandos(app))
+ HEAD
+asyncio.get_event_loop().run_until_complete(registrar_menu_nativo(app))
+
+asyncio.get_event_loop().run_until_complete(configurar_menu_comandos(app))
     
-    app.run_polling(drop_pending_updates=True)
->>>>>>> 134f1a4cb50cdfdbf5565205e0bfb17d7791822a
+app.run_polling(drop_pending_updates=True)
+134f1a4cb50cdfdbf5565205e0bfb17d7791822a
 
     # Configura uma tarefa que roda a cada 6 horas (por exemplo)
-    from telegram.ext import JobQueue
-    import asyncio
+from telegram.ext import JobQueue
+import asyncio
 
-    async def job_vencimento(context):
+async def job_vencimento(context):
         await verificar_vencimentos(context.application)
 
     # Agendar a verificação
-    job_queue = app.job_queue
-    if job_queue:
+job_queue = app.job_queue
+if job_queue:
         job_queue.run_repeating(job_vencimento, interval=3600*6, first=30)  # a cada 6 horas
 
     # Configura a verificação de vencimento a cada 6 horas
-    from telegram.ext import JobQueue
-    job_queue = app.job_queue
-    if job_queue:
+from telegram.ext import JobQueue
+job_queue = app.job_queue
+if job_queue:
         job_queue.run_repeating(
             lambda _: asyncio.create_task(verificar_vencimentos(app)),
             interval=6 * 3600,  # 6 horas em segundos
@@ -248,5 +248,5 @@ def main():
         
         app.run_polling(drop_pending_updates=True)
 
-    if __name__ == "__main__":
+if __name__ == "__main__":
         main()
