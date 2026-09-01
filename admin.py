@@ -28,15 +28,12 @@ async def comando_estatisticas(update: Update, context: ContextTypes.DEFAULT_TYP
         return
 
     try:
-        # Contagem de usuários (assinaturas)
         res_assinaturas = supabase.table("assinaturas").select("*", count="exact").execute()
         total_assinaturas = res_assinaturas.count if hasattr(res_assinaturas, 'count') else len(res_assinaturas.data)
 
-        # Contagem de planos ativos
         res_ativos = supabase.table("assinaturas").select("tipo_plano", count="exact").eq("status", "active").execute()
         total_ativos = res_ativos.count if hasattr(res_ativos, 'count') else len(res_ativos.data)
 
-        # Contagem de cadastros de regulações (IDs de regulação)
         res_regulacoes = supabase.table("AlertaSUS_2.0").select("*", count="exact").execute()
         total_regulacoes = res_regulacoes.count if hasattr(res_regulacoes, 'count') else len(res_regulacoes.data)
 
@@ -46,7 +43,6 @@ async def comando_estatisticas(update: Update, context: ContextTypes.DEFAULT_TYP
             f"✅ <b>Assinaturas Ativas:</b> {total_ativos}\n"
             f"📋 <b>Total de Cadastros de Regulação:</b> {total_regulacoes}\n"
         )
-
         await update.message.reply_text(texto, parse_mode="HTML")
     except Exception as e:
         logger.error(f"[ADMIN] Erro ao executar estatísticas: {e}")
@@ -55,8 +51,7 @@ async def comando_estatisticas(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def comando_listar_ativos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Lista as últimas assinaturas ativas ou cortesias cadastradas."""
-    user = update.effective_user
-    if not eh_admin(user.id):
+    if not eh_admin(update.effective_user.id):
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
         return
 
@@ -74,9 +69,7 @@ async def comando_listar_ativos(update: Update, context: ContextTypes.DEFAULT_TY
                 f"• ID: <code>{reg.get('chat_id')}</code>\n"
                 f"  Plano: <b>{reg.get('tipo_plano')}</b> | Status: {reg.get('status')}\n\n"
             )
-
         await update.message.reply_text(texto_lista, parse_mode="HTML")
-
     except Exception as e:
         logger.error(f"[ADMIN] Erro ao listar ativos: {e}")
         await update.message.reply_text("❌ Erro ao buscar lista de ativos.")
@@ -84,8 +77,7 @@ async def comando_listar_ativos(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def comando_bloquear(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Altera o status de um usuário para banido/bloqueado no banco."""
-    user = update.effective_user
-    if not eh_admin(user.id):
+    if not eh_admin(update.effective_user.id):
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
         return
 
@@ -112,8 +104,7 @@ async def comando_bloquear(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def comando_detalhes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Busca e exibe todas as informações de um usuário específico pelo ID."""
-    user = update.effective_user
-    if not eh_admin(user.id):
+    if not eh_admin(update.effective_user.id):
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
         return
 
@@ -142,7 +133,6 @@ async def comando_detalhes(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"• <b>Limite IDs:</b> {user_data.get('limite_ids')}\n"
         )
         await update.message.reply_text(texto, parse_mode="HTML")
-
     except Exception as e:
         logger.error(f"[ADMIN] Erro ao buscar detalhes do usuário {target_id}: {e}")
         await update.message.reply_text("❌ Erro ao consultar dados do usuário.")
@@ -150,22 +140,21 @@ async def comando_detalhes(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def comando_dar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Concede um plano específico com validade em dias para um usuário."""
-    user = update.effective_user
-    if not eh_admin(user.id):
+    if not eh_admin(update.effective_user.id):
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
         return
 
     if len(context.args) < 3:
         await update.message.reply_text(
             "⚠️ <b>Uso correto:</b> <code>/dar_plano &lt;ID&gt; &lt;plano&gt; &lt;dias&gt;</code>\n"
-            "<i>Exemplo:</i> <code>/dar_plano 123456789 pro 30</code>", 
+            "<i>Exemplo:</i> <code>/dar_plano 123456789 pro 30</code>",
             parse_mode="HTML"
         )
         return
 
     target_id = context.args[0].strip()
     nome_plano = context.args[1].strip().lower()
-    
+
     try:
         dias = int(context.args[2])
     except ValueError:
@@ -195,10 +184,8 @@ async def comando_dar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await context.bot.send_message(
                 chat_id=target_id,
-                text=(
-                    f"🎁 <b>Seu plano foi atualizado!</b>\n\n"
-                    f"Você agora possui acesso ao plano <b>{nome_plano.upper()}</b> válido por {dias} dias. Aproveite!"
-                ),
+                text=f"🎁 <b>Seu plano foi atualizado!</b>\n\n"
+                     f"Você agora possui acesso ao plano <b>{nome_plano.upper()}</b> válido por {dias} dias. Aproveite!",
                 parse_mode="HTML"
             )
         except Exception:
@@ -211,8 +198,7 @@ async def comando_dar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def comando_cortesia(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Concede acesso VIP/Cortesia ilimitada para um usuário."""
-    user = update.effective_user
-    if not eh_admin(user.id):
+    if not eh_admin(update.effective_user.id):
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
         return
 
@@ -236,10 +222,88 @@ async def comando_cortesia(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Erro ao conceder cortesia: {e}")
 
 
+async def comando_remover_cortesia(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Remove a cortesia de um usuário, deixando-o neutro (sem plano, sem degustação)."""
+    if not eh_admin(update.effective_user.id):
+        await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
+        return
+
+    if not context.args:
+        await update.message.reply_text("⚠️ Uso correto: <code>/remover_cortesia &lt;TELEGRAM_ID&gt;</code>", parse_mode="HTML")
+        return
+
+    target_id = context.args[0].strip()
+
+    try:
+        # Verifica se o usuário existe
+        res = supabase.table("assinaturas").select("*").eq("chat_id", str(target_id)).execute()
+        if not res.data:
+            # Se não existe, cria um registro neutro com trava de degustação
+            supabase.table("assinaturas").insert({
+                "chat_id": str(target_id),
+                "tipo_plano": None,
+                "status": None,
+                "usou_degustacao": True
+            }).execute()
+        else:
+            # Atualiza para estado neutro, mantendo a trava de degustação
+            supabase.table("assinaturas").update({
+                "tipo_plano": None,
+                "status": None,
+                "data_inicio": None,
+                "data_vencimento": None,
+                "limite_ids": None,
+                "usou_degustacao": True
+            }).eq("chat_id", str(target_id)).execute()
+
+        await update.message.reply_text(f"✅ Cortesia removida do ID <code>{target_id}</code>. Usuário agora está neutro.", parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"[ADMIN] Erro ao remover cortesia: {e}")
+        await update.message.reply_text(f"❌ Erro ao remover cortesia: {e}")
+
+
+async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Retira o plano de um usuário, deixando-o neutro (sem plano, com trava de degustação)."""
+    if not eh_admin(update.effective_user.id):
+        await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
+        return
+
+    if not context.args:
+        await update.message.reply_text("⚠️ Uso correto: /retirar_plano <ID>")
+        return
+
+    target_id = context.args[0].strip()
+
+    try:
+        # Verifica se existe registro
+        res = supabase.table("assinaturas").select("*").eq("chat_id", str(target_id)).execute()
+        if not res.data:
+            # Se não existe, cria um registro neutro com trava de degustação
+            supabase.table("assinaturas").insert({
+                "chat_id": str(target_id),
+                "tipo_plano": None,
+                "status": None,
+                "usou_degustacao": True
+            }).execute()
+        else:
+            # Atualiza para estado neutro, mantendo a trava de degustação
+            supabase.table("assinaturas").update({
+                "tipo_plano": None,
+                "status": None,
+                "data_inicio": None,
+                "data_vencimento": None,
+                "limite_ids": None,
+                "usou_degustacao": True
+            }).eq("chat_id", str(target_id)).execute()
+
+        await update.message.reply_text(f"✅ Plano retirado do usuário {target_id}. Usuário agora está neutro.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Erro ao retirar plano: {e}")
+
+
 async def comando_retirar_degustacao(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Retira o acesso à degustação de um usuário (impede de usar novamente)."""
-    user = update.effective_user
-    if not eh_admin(user.id):
+    if not eh_admin(update.effective_user.id):
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
         return
 
@@ -275,57 +339,15 @@ async def comando_retirar_degustacao(update: Update, context: ContextTypes.DEFAU
     except Exception as e:
         await update.message.reply_text(f"❌ Erro ao retirar degustação: {e}")
 
-async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Retira o plano de um usuário, deixando-o neutro (sem plano ativo, mas mantendo trava de degustação)."""
-    user = update.effective_user
-    if not eh_admin(user.id):
-        await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
-        return
 
-    if not context.args:
-        await update.message.reply_text("⚠️ Uso correto: /retirar_plano <ID>")
-        return
-
-    target_id = context.args[0].strip()
-
-    try:
-        # Verifica se existe registro
-        res = supabase.table("assinaturas").select("*").eq("chat_id", str(target_id)).execute()
-        if not res.data:
-            # Se não existe, cria um registro neutro com a trava de degustação ativada
-            supabase.table("assinaturas").insert({
-                "chat_id": str(target_id),
-                "tipo_plano": None,
-                "status": None,
-                "usou_degustacao": True
-            }).execute()
-        else:
-            # Atualiza o registro para estado neutro, mantendo a trava de degustação
-            supabase.table("assinaturas").update({
-                "tipo_plano": None,
-                "status": None,
-                "data_inicio": None,
-                "data_vencimento": None,
-                "limite_ids": None,
-                "usou_degustacao": True  # Trava para não usar degustação novamente
-            }).eq("chat_id", str(target_id)).execute()
-
-        await update.message.reply_text(f"✅ Plano retirado do usuário {target_id}. Usuário agora está neutro (sem plano, sem degustação).")
-    except Exception as e:
-        await update.message.reply_text(f"❌ Erro ao retirar plano: {e}")
-        
 async def comando_aviso(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Envia uma mensagem de broadcast (aviso em massa) para todos os usuários cadastrados."""
-    user = update.effective_user
-    if not eh_admin(user.id):
+    if not eh_admin(update.effective_user.id):
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
         return
 
     if not context.args:
-        await update.message.reply_text(
-            "⚠️ <b>Uso correto:</b> <code>/aviso &lt;Sua mensagem aqui&gt;</code>", 
-            parse_mode="HTML"
-        )
+        await update.message.reply_text("⚠️ <b>Uso correto:</b> <code>/aviso &lt;Sua mensagem aqui&gt;</code>", parse_mode="HTML")
         return
 
     mensagem_broadcast = " ".join(context.args)
@@ -361,7 +383,6 @@ async def comando_aviso(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"• Falhas (usuários que bloquearam o bot): <code>{falhas}</code>",
             parse_mode="HTML"
         )
-
     except Exception as e:
         logger.error(f"[ADMIN] Erro no broadcast: {e}")
         await update.message.reply_text(f"❌ Erro ao executar o envio em massa: {e}")
@@ -369,9 +390,7 @@ async def comando_aviso(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def comando_menu_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Exibe o painel de controle administrativo."""
-    user = update.effective_user
-
-    if user.id not in ADMIN_IDS:
+    if not eh_admin(update.effective_user.id):
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
         return
 
@@ -385,14 +404,13 @@ async def comando_menu_admin(update: Update, context: ContextTypes.DEFAULT_TYPE)
         "• /detalhes &lt;ID&gt; - Mostra dados completos de um usuário\n\n"
         "👑 <b>Gestão de Planos e Acessos:</b>\n"
         "• /cortesia &lt;ID&gt; - Concede acesso ilimitado/VIP\n"
-        "• /remover_cortesia &lt;ID&gt; - Retira cortesia e volta para degustação\n"
+        "• /remover_cortesia &lt;ID&gt; - Retira cortesia e deixa neutro\n"
         "• /dar_plano &lt;ID&gt; &lt;plano&gt; &lt;dias&gt; - Concede plano com validade\n"
-        "• /retirar_plano &lt;ID&gt; - Retira plano pago (volta para degustação ou sem plano)\n"
+        "• /retirar_plano &lt;ID&gt; - Retira plano pago e deixa neutro\n"
         "• /retirar_degustacao &lt;ID&gt; - Retira acesso à degustação\n\n"
         "🛡️ <b>Segurança e Comunicação:</b>\n"
         "• /bloquear &lt;ID&gt; - Bloqueia o acesso de um usuário\n"
         "• /aviso &lt;mensagem&gt; - Dispara broadcast para toda a base\n\n"
         "💡 <i>Dica: Pode digitar o comando diretamente na barra de mensagens.</i>"
     )
-
     await update.message.reply_text(texto, parse_mode="HTML")
