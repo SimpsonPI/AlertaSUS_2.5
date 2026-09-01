@@ -261,7 +261,7 @@ async def comando_remover_cortesia(update: Update, context: ContextTypes.DEFAULT
 
 
 async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Retira o plano pago de um usuário (volta para gratuito)."""
+    """Retira o plano de um usuário, deixando-o como novo (sem registro)."""
     user = update.effective_user
     if not eh_admin(user.id):
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
@@ -274,21 +274,18 @@ async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TY
     target_id = context.args[0].strip()
 
     try:
+        # Verifica se existe registro
         res = supabase.table("assinaturas").select("*").eq("chat_id", str(target_id)).execute()
         if not res.data:
-            await update.message.reply_text("❌ Usuário não encontrado ou sem assinatura.")
+            await update.message.reply_text("ℹ️ Este usuário não possui registro de assinatura (já está neutro).")
             return
 
-        supabase.table("assinaturas").update({
-            "tipo_plano": "gratuito",
-            "status": "ativo",
-            "data_vencimento": None
-        }).eq("chat_id", str(target_id)).execute()
+        # Remove completamente o registro (volta a ser usuário novo)
+        supabase.table("assinaturas").delete().eq("chat_id", str(target_id)).execute()
 
-        await update.message.reply_text(f"✅ Plano retirado do usuário {target_id}. Plano atual: Gratuito.")
+        await update.message.reply_text(f"✅ Plano retirado do usuário {target_id}. Agora ele está como um usuário novo (neutro).")
     except Exception as e:
         await update.message.reply_text(f"❌ Erro ao retirar plano: {e}")
-
 
 async def comando_retirar_degustacao(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Retira o acesso à degustação de um usuário (impede de usar novamente)."""
