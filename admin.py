@@ -261,7 +261,7 @@ async def comando_remover_cortesia(update: Update, context: ContextTypes.DEFAULT
 
 
 async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Retira o plano de um usuário, deixando-o neutro (sem plano ativo, mas mantendo o registro)."""
+    """Retira o plano de um usuário, deixando-o neutro (sem plano ativo)."""
     user = update.effective_user
     if not eh_admin(user.id):
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
@@ -280,20 +280,19 @@ async def comando_retirar_plano(update: Update, context: ContextTypes.DEFAULT_TY
             await update.message.reply_text("ℹ️ Usuário não encontrado no banco de assinaturas.")
             return
 
-        # Atualiza o registro para estado neutro (status e tipo_plano nulos, sem validade)
+        # Atualiza o registro para estado neutro (status e tipo_plano NULL)
         supabase.table("assinaturas").update({
             "tipo_plano": None,
             "status": None,
             "data_inicio": None,
             "data_vencimento": None,
             "limite_ids": None,
-            "usou_degustacao": False  # Permite que ele use a degustação novamente, se desejar
+            "usou_degustacao": False
         }).eq("chat_id", str(target_id)).execute()
 
         await update.message.reply_text(f"✅ Plano retirado do usuário {target_id}. Status agora é neutro.")
     except Exception as e:
-        await update.message.reply_text(f"❌ Erro ao retirar plano: {e}")
-        
+        await update.message.reply_text(f"❌ Erro ao retirar plano: {e}")        
 async def comando_retirar_degustacao(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Retira o acesso à degustação de um usuário (impede de usar novamente)."""
     user = update.effective_user
