@@ -1,5 +1,6 @@
 import os
 import logging
+import asyncio
 from telegram import BotCommand, BotCommandScopeAllPrivateChats
 from telegram.ext import (
     ApplicationBuilder,
@@ -25,7 +26,7 @@ from handler import (
     iniciar_excluir,
     iniciar_verificar_especifico,
     start,
-    configurar_menu_comandos,
+    configurar_menu_comandos,  # <-- Importando a função
 )
 from handler_gestao import (
     selecionar_regulacao_callback,
@@ -53,7 +54,7 @@ from admin import (
     comando_retirar_degustacao,
 )
 
-# Imports do suporte
+# IMPORTS DO SUPORTE
 from suporte import (
     menu_suporte,
     exibir_resposta_faq,
@@ -125,9 +126,25 @@ async def verificar_vencimentos(app):
     except Exception as e:
         logger.error(f"Erro na verificação de vencimentos: {e}")
 
+
+async def post_init(app):
+    """Executa tarefas após a inicialização do bot."""
+    await configurar_menu_comandos(app)
+    
+    # Agendar verificação de vencimentos (a cada 6 horas)
+    job_queue = app.job_queue
+    if job_queue:
+        job_queue.run_repeating(
+            lambda _: asyncio.create_task(verificar_vencimentos(app)),
+            interval=6 * 3600,
+            first=60
+        )
+        logger.info("Verificação de vencimentos agendada (a cada 6 horas)")
+
+
 def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN") or TELEGRAM_BOT_TOKEN
-    app = ApplicationBuilder().token(token).build()
+    app = ApplicationBuilder().token(token).post_init(post_init).build()
     app.add_error_handler(erro_global_handler)
 
     conv_corrigir = ConversationHandler(
@@ -168,10 +185,10 @@ def main():
     app.add_handler(CommandHandler("dar_plano", comando_dar_plano))
     app.add_handler(CommandHandler("cortesia", comando_cortesia))
     app.add_handler(CommandHandler("remover_cortesia", comando_remover_cortesia))
-    app.add_handler(CommandHandler("bloquear", comando_bloquear))
-    app.add_handler(CommandHandler("aviso", comando_aviso))
     app.add_handler(CommandHandler("retirar_plano", comando_retirar_plano))
     app.add_handler(CommandHandler("retirar_degustacao", comando_retirar_degustacao))
+    app.add_handler(CommandHandler("bloquear", comando_bloquear))
+    app.add_handler(CommandHandler("aviso", comando_aviso))
 
     app.add_handler(CallbackQueryHandler(detalhar_plano, pattern="^plano_"))
     app.add_handler(CallbackQueryHandler(gerar_pagamento_pix, pattern="^pix_"))
@@ -184,6 +201,7 @@ def main():
 
     app.add_handler(conv_suporte)
 
+    # Servidor HTTP auxiliar
     PORT = int(os.environ.get("PORT", "8080"))
     
     import threading
@@ -203,21 +221,6 @@ def main():
     logger.info(f"Servidor HTTP auxiliar rodando na porta {PORT}")
 
     logger.info("Iniciando o bot AlertaSUS via polling...")
-
-    # Atualiza o menu de comandos antes de iniciar o polling
-    import asyncio
-    asyncio.run(configurar_menu_comandos(app))
-
-    # Agenda a verificação de vencimento a cada 6 horas
-    job_queue = app.job_queue
-    if job_queue:
-        job_queue.run_repeating(
-            lambda _: asyncio.create_task(verificar_vencimentos(app)),
-            interval=6 * 3600,
-            first=60
-        )
-        logger.info("Verificação de vencimentos agendada (a cada 6 horas)")
-
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
