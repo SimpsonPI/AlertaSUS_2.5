@@ -129,7 +129,7 @@ async def verificar_vencimentos(app):
 
 async def post_init(app):
     """Executa tarefas após a inicialização do bot."""
-    await configurar_menu_comandos(app)
+    # await configurar_menu_comandos(app)  # <-- COMENTADO PARA NÃO SOBRESCREVER O MENU
     
     # Agendar verificação de vencimentos (a cada 6 horas)
     job_queue = app.job_queue
@@ -140,7 +140,6 @@ async def post_init(app):
             first=60
         )
         logger.info("Verificação de vencimentos agendada (a cada 6 horas)")
-
 
 def main():
     token = os.getenv("TELEGRAM_BOT_TOKEN") or TELEGRAM_BOT_TOKEN
