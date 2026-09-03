@@ -4,7 +4,7 @@ from supabase import create_client, Client
 
 # 1. Configuração da Página
 st.set_page_config(
-    page_title="AlertaSUS 2.0 - Central de Controle",
+    page_title="VigiaSaude - Central de Controle",
     page_icon="🏥",
     layout="wide"
 )
@@ -39,7 +39,7 @@ def carregar_tabela(nome_tabela):
         return pd.DataFrame()
 
 # --- TÍTULO E BOTÃO DE ATUALIZAR GERAL ---
-st.title("🏥 AlertaSUS 2.0 — Central de Controle Total")
+st.title("🏥 VigiaSaude — Central de Controle Total")
 
 col_btn1, col_btn2 = st.columns([8, 2])
 with col_btn2:

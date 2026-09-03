@@ -24,7 +24,7 @@ async def gerar_pagamento_pix(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.answer()
         user_id = query.from_user.id
         first_name = query.from_user.first_name or "Usuario"
-        last_name = query.from_user.last_name or "AlertaSUS"
+        last_name = query.from_user.last_name or "VigiaSaude"
         plano_chave = query.data.replace("pix_", "").replace("pix_pro_", "pro_")
         # Garante mapeamento correto das chaves de planos
         if plano_chave in ["semestral", "pro_semestral"]:
@@ -36,7 +36,7 @@ async def gerar_pagamento_pix(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         user_id = update.effective_user.id
         first_name = update.effective_user.first_name or "Usuario"
-        last_name = update.effective_user.last_name or "AlertaSUS"
+        last_name = update.effective_user.last_name or "VigiaSaude"
         plano_chave = context.args[0].lower() if context.args else "pro_mensal"
         chat_id = update.effective_chat.id
 
@@ -46,7 +46,7 @@ async def gerar_pagamento_pix(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     payment_data = {
         "transaction_amount": float(valor),
-        "description": f"AlertaSUS 2.0 - {nome_plano}",
+        "description": f"VigiaSaude - {nome_plano}",
         "payment_method_id": "pix",
         "payer": {
             "email": f"cliente_{user_id}@gmail.com",
@@ -93,7 +93,7 @@ async def gerar_pagamento_pix(update: Update, context: ContextTypes.DEFAULT_TYPE
             logger.warning(f"⚠️ Aviso ao registrar pagamento na tabela pagamentos_pix: {e_db}")
 
         legenda_mensagem = (
-            f"💳 <b>{nome_plano.upper()} — AlertaSUS 2.0</b>\n\n"
+            f"💳 <b>{nome_plano.upper()} — VigiaSaude</b>\n\n"
             f"• <b>Valor:</b> R$ {valor:.2f}\n"
             f"• <b>Liberação:</b> Instantânea após a confirmação\n\n"
             f"Aponte a câmera do seu aplicativo bancário para o QR Code acima ou utilize o código Copia e Cola abaixo:"

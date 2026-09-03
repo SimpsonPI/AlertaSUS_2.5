@@ -15,10 +15,10 @@ AGUARDANDO_MENSAGEM = 1
 async def menu_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Central de Atendimento - Links, FAQs e Email"""
     texto = (
-        "🤖 <b>Central de Atendimento AlertaSUS 2.0</b>\n\n"
+        "🤖 <b>Central de Atendimento VigiaSaude</b>\n\n"
         "Como podemos ajudar você hoje?\n\n"
         "<b>📌 Canais de Atendimento:</b>\n"
-        "• 🤖 <b>Bot de Atendimento:</b> @meu_atendimento_123_bot\n"
+        "• 🤖 <b>Bot de Atendimento:</b> @central_vigiasaude_bot\n"
         "• 📧 <b>Email:</b> suportealertasus@gmail.com\n\n"
         "<b>❓ Perguntas Frequentes (FAQs):</b>\n"
         "1️⃣ Como cadastrar uma nova regulação?\n"
@@ -26,7 +26,7 @@ async def menu_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "3️⃣ Onde encontrar o Cartão SUS ou ID?\n"
         "4️⃣ Como corrigir dados?\n"
         "5️⃣ Planos e Assinaturas\n"
-        "6️⃣ O AlertaSUS tem vínculo com o governo?\n\n"
+        "6️⃣ O VigiaSaude tem vínculo com o governo?\n\n"
         "Selecione uma opção abaixo:"
     )
     
@@ -90,8 +90,8 @@ async def exibir_resposta_faq(update: Update, context: ContextTypes.DEFAULT_TYPE
             "• Para verificar seus planos ativos, renovar ou fazer um upgrade, acesse o comando <b>/planos</b> no menu principal."
         ),
         "faq_governo": (
-            "⚠️ <b>O AlertaSUS tem vínculo com o governo?</b>\n\n"
-            "Não. O AlertaSUS é uma ferramenta <b>independente</b> e não possui vínculo oficial com a Prefeitura de Teresina, FMS ou SUS.\n"
+            "⚠️ <b>O VigiaSaude tem vínculo com o governo?</b>\n\n"
+            "Não. O VigiaSaude é uma ferramenta <b>independente</b> e não possui vínculo oficial com a Prefeitura de Teresina, FMS ou SUS.\n"
             "As informações são baseadas nos dados públicos dos portais de regulação."
         ),
     }
@@ -137,7 +137,7 @@ async def iniciar_atendimento_20(update: Update, context: ContextTypes.DEFAULT_T
     await query.answer()
 
     mensagem = (
-        "🤖 <b>Central de Atendimento ao Usuário AlertaSUS 2.0</b>\n\n"
+        "🤖 <b>Central de Atendimento ao Usuário VigiaSaude</b>\n\n"
         "Por favor, digite abaixo a sua dúvida ou descreva detalhadamente o seu problema sobre o Cartão SUS ou ID da Regulação.\n\n"
         "<i>Sua mensagem será enviada diretamente para a nossa equipe de suporte.</i>"
     )

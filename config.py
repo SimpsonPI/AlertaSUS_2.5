@@ -74,7 +74,7 @@ MSG_ATENDIMENTO_ENCERRADO = "❌ Atendimento encerrado. Se precisar de algo, ace
 MSG_MODAL_RESPOSTA = "✍️ <b>Modo de Resposta Ativado</b> para o ID: <code>{user_id}</code>\n\nDigite a mensagem que deseja enviar para este usuário agora:"
 
 MSG_BOAS_VINDAS = (
-    "🤖 <b>Central de Atendimento ao Usuário AlertaSUS 2.0</b>\n\n"
+    "🤖 <b>Central de Atendimento ao Usuário VigiaSaude</b>\n\n"
     "Seja bem-vindo(a)! Como posso ajudá-lo hoje?\n\n"
     "🔹 <b>Menu Principal:</b>\n"
     "• /ajuda - Perguntas Frequentes (FAQ)\n"
@@ -94,7 +94,7 @@ MSG_SUPORTE_INICIAL = (
 )
 
 MSG_ATENDIMENTO_INICIADO = (
-    "🎧 <b>Atendimento Personalizado AlertaSUS</b>\n\n"
+    "🎧 <b>Atendimento Personalizado VigiaSaude</b>\n\n"
     "Olá! Escreva abaixo a sua dúvida ou demanda para que nossa equipe receba por aqui:\n\n"
     "✏️ <i>Digite sua mensagem agora...</i>"
 )

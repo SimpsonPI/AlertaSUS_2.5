@@ -1,7 +1,11 @@
+from dotenv import load_dotenv
+load_dotenv()
+# ... o restante dos imports
 import os
 import logging
 import asyncio
 from telegram import BotCommand, BotCommandScopeAllPrivateChats
+from admin_ia_controller import executar_acao_admin
 from telegram.ext import (
     ApplicationBuilder,
     CallbackQueryHandler,
@@ -189,6 +193,14 @@ def main():
     app.add_handler(CommandHandler("bloquear", comando_bloquear))
     app.add_handler(CommandHandler("aviso", comando_aviso))
 
+    # ==========================================
+    # ⬇️ HANDLER DO ADMIN (linguagem natural) - AQUI
+    # ==========================================
+    app.add_handler(
+        MessageHandler(filters.TEXT & ~filters.COMMAND, executar_acao_admin),
+        group=3
+    )
+
     app.add_handler(CallbackQueryHandler(detalhar_plano, pattern="^plano_"))
     app.add_handler(CallbackQueryHandler(gerar_pagamento_pix, pattern="^pix_"))
     app.add_handler(CallbackQueryHandler(comando_planos, pattern="^planos$"))
@@ -210,7 +222,7 @@ def main():
         def do_GET(self):
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(b"Bot AlertaSUS 2.5 is running!")
+            self.wfile.write(b"Bot VigiaSaude 2.5 is running!")
 
     def run_http_server(port):
         server = HTTPServer(("0.0.0.0", port), SimpleHandler)
@@ -219,7 +231,7 @@ def main():
     threading.Thread(target=run_http_server, args=(PORT,), daemon=True).start()
     logger.info(f"Servidor HTTP auxiliar rodando na porta {PORT}")
 
-    logger.info("Iniciando o bot AlertaSUS via polling...")
+    logger.info("Iniciando o bot VigiaSaude via polling...")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":

@@ -1,12 +1,19 @@
+import os
 import asyncio
+from dotenv import load_dotenv
 from telegram import Bot, BotCommand
 
-# Token do bot principal
-TOKEN = "8988706536:AAEydocNLCLaQzjHJHfGgG0OvBmArz-5ZRA"
+# Carrega as variáveis do arquivo .env
+load_dotenv()
 
-async def atualizar_menu():
+# Obtém o token do ambiente (não precisa colar o token no código)
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
+if not TOKEN:
+    raise ValueError("❌ TELEGRAM_BOT_TOKEN não configurado no arquivo .env")
+
+async def atualizar():
     bot = Bot(token=TOKEN)
-    
     comandos = [
         BotCommand("iniciar", "🚀 Menu principal e boas-vindas"),
         BotCommand("verificar_todos", "🔍 Verificar todas as regulações"),
@@ -18,8 +25,7 @@ async def atualizar_menu():
         BotCommand("privacidade", "🔒 Política de privacidade e LGPD"),
         BotCommand("suporte", "🤖 Central de Atendimento"),
     ]
-    
     await bot.set_my_commands(comandos)
     print("✅ Menu atualizado com sucesso!")
 
-asyncio.run(atualizar_menu())
+asyncio.run(atualizar())

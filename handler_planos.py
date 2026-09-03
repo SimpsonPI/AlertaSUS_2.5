@@ -111,7 +111,7 @@ async def comando_planos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif is_ativo and is_degustacao:
         texto = (
             "🎁 <b>Você está utilizando o Plano Degustação (Grátis)!</b>\n\n"
-            "Seu período de teste está <b>ativo</b> no AlertaSUS.\n"
+            "Seu período de teste está <b>ativo</b> no VigiaSaude.\n"
             "• <b>Limite Atual:</b> Até 2 regulações cadastradas\n\n"
             "💡 <i>Se desejar ampliar seu limite de monitoramentos, consulte nossos planos Pro abaixo:</i>"
         )
@@ -119,7 +119,7 @@ async def comando_planos(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     else:
         texto = (
-            "💳 <b>Planos e Assinaturas — AlertaSUS</b>\n\n"
+            "💳 <b>Planos e Assinaturas — VigiaSaude</b>\n\n"
             "Acompanhe suas consultas e exames sem preocupações. Escolha o plano ideal "
             "para você e receba notificações instantâneas no seu Telegram assim que sua regulação andar!\n\n"
             "<i>Selecione uma das opções abaixo para ver mais detalhes:</i>"

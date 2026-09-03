@@ -114,13 +114,13 @@ async def cancelar_operacao(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 
 async def callback_faq_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Exibe a FAQ completa do AlertaSUS 2.5 diretamente no chat."""
+    """Exibe a FAQ completa do VigiaSaude 2.5 diretamente no chat."""
     query = update.callback_query
     await query.answer()
     
     faq_texto = (
-        "❓ <b>FAQ e Central de Ajuda — AlertaSUS 2.5</b>\n\n"
-        "<b>1. O que é o AlertaSUS 2.5?</b>\n"
+        "❓ <b>FAQ e Central de Ajuda — VigiaSaude 2.5</b>\n\n"
+        "<b>1. O que é o VigiaSaude 2.5?</b>\n"
         "Serviço independente de monitoramento. Não possuímos vínculo oficial com a FMS ou Prefeitura de Teresina, fazemos o monitoramento do andamento de suas regulações de saúde (consultas, exames e cirurgias) de forma automatizada.\n\n"
         "<b>2. Como o bot rastreia minhas solicitações?</b>\n"
         "Utilizamos os dados informados por você (como o número da regulação) para verificar atualizações diretamente nos sistemas públicos.\n\n"
@@ -129,7 +129,7 @@ async def callback_faq_suporte(update: Update, context: ContextTypes.DEFAULT_TYP
         "<b>4. Como faço para corrigir um número ou procedimento?</b>\n"
         "Basta utilizar o comando /corrigir no menu principal para atualizar dados como CBO, celular ou nome do paciente.\n\n"
         "<b>5. O bot substitui a fila oficial do SUS?</b>\n"
-        "Não. O AlertaSUS é um facilitador de avisos e consultas. A marcação, chamada e gestão de vagas continuam sob responsabilidade exclusiva da Secretaria de Saúde.\n\n"
+        "Não. O VigiaSaude é um facilitador de avisos e consultas. A marcação, chamada e gestão de vagas continuam sob responsabilidade exclusiva da Secretaria de Saúde.\n\n"
         "<b>6. Como posso falar com o suporte humano?</b>\n"
         "Caso tenha problemas técnicos, envie uma mensagem diretamente para nossa equipe de atendimento."
     )
@@ -165,7 +165,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     nome = user.first_name or "Usuário"
 
     mensagem = (
-        f"👋 Olá, <b>{nome}</b>! Bem-vindo ao <b>AlertaSUS 2.0</b>.\n\n"
+        f"👋 Olá, <b>{nome}</b>! Bem-vindo ao <b>VigiaSaude</b>.\n\n"
         f"🆔 <b>Seu ID do Telegram:</b> <code>{user.id}</code>\n\n"
         "Acesse todas as opções e comandos diretamente pelo menu nativo do Telegram "
         "(botão <b>[/]</b> ao lado da barra de digitação)."
@@ -240,7 +240,7 @@ async def comando_planos(update: Update, context: ContextTypes.DEFAULT_TYPE):
         texto = "🎁 <b>Plano Degustação Ativo!</b>\n• <b>Limite:</b> Até 2 regulações"
         teclado = await obter_menu_planos(user_id)
     else:
-        texto = "💳 <b>Planos e Assinaturas — AlertaSUS</b>\nEscolha um plano abaixo:"
+        texto = "💳 <b>Planos e Assinaturas — VigiaSaude</b>\nEscolha um plano abaixo:"
         teclado = await obter_menu_planos(user_id)
 
     if update.callback_query:
@@ -321,12 +321,12 @@ async def comando_privacidade(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def comando_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Envia o menu de ajuda e FAQs para o usuário."""
     texto = (
-        "🤖 *Central de Ajuda e FAQ - AlertaSUS*\n\n"
+        "🤖 *Central de Ajuda e FAQ - VigiaSaude*\n\n"
         "Selecione uma das opções abaixo para tirar suas dúvidas ou obter suporte:"
     )
     
     teclado = [
-        [InlineKeyboardButton("❓ O que é o AlertaSUS?", callback_data="faq_o_que_e")],
+        [InlineKeyboardButton("❓ O que é o VigiaSaude?", callback_data="faq_o_que_e")],
         [InlineKeyboardButton("🔍 Como rastrear?", callback_data="faq_rastrear")],
         [InlineKeyboardButton("🔒 Segurança de Dados", callback_data="faq_seguranca")],
         [InlineKeyboardButton("✏️ Como corrigir dados", callback_data="faq_corrigir")],
@@ -342,10 +342,10 @@ async def comando_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def comando_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Central de Atendimento - Links, FAQs e Email"""
     texto = (
-        "🤖 <b>Central de Atendimento AlertaSUS 2.0</b>\n\n"
+        "🤖 <b>Central de Atendimento VigiaSaude</b>\n\n"
         "Como podemos ajudar você hoje?\n\n"
         "<b>📌 Canais de Atendimento:</b>\n"
-        "• 🤖 <b>Bot de Atendimento:</b> @meu_atendimento_123_bot\n"
+        "• 🤖 <b>Bot de Atendimento:</b> @central_vigiasaude_bot\n"
         "• 📧 <b>Email:</b> suportealertasus@gmail.com\n\n"
         "<b>❓ Perguntas Frequentes (FAQs):</b>\n"
         "1️⃣ Como cadastrar uma nova regulação?\n"
@@ -353,7 +353,7 @@ async def comando_suporte(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "3️⃣ Onde encontrar o Cartão SUS ou ID?\n"
         "4️⃣ Como corrigir dados?\n"
         "5️⃣ Planos e Assinaturas\n"
-        "6️⃣ O AlertaSUS tem vínculo com o governo?\n\n"
+        "6️⃣ O VigiaSaude tem vínculo com o governo?\n\n"
         "Selecione uma opção abaixo:"
     )
     
@@ -390,7 +390,7 @@ async def voltar_ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def faq_o_que_e(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    texto = "💡 <b>O que é o AlertaSUS?</b>\n\nÉ uma ferramenta independente desenvolvida para facilitar o acompanhamento de status de solicitações de regulação junto aos sistemas públicos de saúde."
+    texto = "💡 <b>O que é o VigiaSaude?</b>\n\nÉ uma ferramenta independente desenvolvida para facilitar o acompanhamento de status de solicitações de regulação junto aos sistemas públicos de saúde."
     teclado = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Voltar", callback_data="ajuda")]])
     await query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
 
@@ -692,12 +692,12 @@ async def faq_planos(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def faq_governo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Resposta para O AlertaSUS tem vínculo com o governo."""
+    """Resposta para O VigiaSaude tem vínculo com o governo."""
     query = update.callback_query
     await query.answer()
     texto = (
-        "⚠️ <b>O AlertaSUS tem vínculo com o governo?</b>\n\n"
-        "Não. O AlertaSUS é uma ferramenta <b>independente</b> e não possui vínculo oficial com a Prefeitura de Teresina, FMS ou SUS.\n"
+        "⚠️ <b>O VigiaSaude tem vínculo com o governo?</b>\n\n"
+        "Não. O VigiaSaude é uma ferramenta <b>independente</b> e não possui vínculo oficial com a Prefeitura de Teresina, FMS ou SUS.\n"
         "As informações são baseadas nos dados públicos dos portais de regulação."
     )
     teclado = InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Voltar", callback_data="suporte")]])

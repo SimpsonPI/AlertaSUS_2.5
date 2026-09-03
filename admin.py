@@ -358,7 +358,7 @@ async def comando_aviso(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 await context.bot.send_message(
                     chat_id=chat_id,
-                    text=f"📢 <b>AVISO IMPORTANTE - AlertaSUS 2.0</b>\n\n{mensagem_broadcast}",
+                    text=f"📢 <b>AVISO IMPORTANTE - VigiaSaude</b>\n\n{mensagem_broadcast}",
                     parse_mode="HTML"
                 )
                 enviados += 1
@@ -387,7 +387,7 @@ async def comando_menu_admin(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     texto = (
         "🎛️ <b>PAINEL DE CONTROLE ADMINISTRATIVO</b>\n"
-        "AlertaSUS 2.0 - Central de Operações\n\n"
+        "VigiaSaude - Central de Operações\n\n"
         "Selecione ou utilize um dos comandos abaixo para gerenciar o bot:\n\n"
         "📊 <b>Relatórios e Dados:</b>\n"
         "• /estatisticas - Visão geral de usuários, planos e cadastros\n"

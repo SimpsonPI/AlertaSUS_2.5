@@ -30,7 +30,7 @@ AGUARDANDO_MENSAGEM_CHAMADO = 1
 async def menu_atendimento(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Exibe o menu principal de atendimento ao cliente."""
     texto = (
-        "🤖 <b>Central de Atendimento AlertaSUS 2.0</b>\n\n"
+        "🤖 <b>Central de Atendimento VigiaSaude</b>\n\n"
         "Olá! Como posso ajudar você hoje?\n\n"
         "<b>Opções disponíveis:</b>\n"
         "• ❓ <b>FAQ Automático:</b> Respostas instantâneas para dúvidas frequentes\n"
@@ -68,7 +68,7 @@ async def iniciar_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer()
         
         texto = (
-            "📚 <b>FAQ Automático - AlertaSUS 2.0</b>\n\n"
+            "📚 <b>FAQ Automático - VigiaSaude</b>\n\n"
             "Digite abaixo sua dúvida que nossa IA tentará responder automaticamente.\n"
             "Ou clique em um dos tópicos abaixo:\n\n"
             "1️⃣ Como cadastrar uma regulação?\n"
@@ -76,7 +76,7 @@ async def iniciar_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "3️⃣ Onde encontrar o Cartão SUS ou ID?\n"
             "4️⃣ Como alterar meus dados?\n"
             "5️⃣ Planos e Assinaturas\n"
-            "6️⃣ O AlertaSUS tem vínculo com o governo?"
+            "6️⃣ O VigiaSaude tem vínculo com o governo?"
         )
         
         teclado = InlineKeyboardMarkup([
@@ -99,7 +99,7 @@ async def iniciar_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(texto, parse_mode="HTML", reply_markup=teclado)
     else:
         texto = (
-            "📚 <b>FAQ Automático - AlertaSUS 2.0</b>\n\n"
+            "📚 <b>FAQ Automático - VigiaSaude</b>\n\n"
             "Digite abaixo sua dúvida que nossa IA tentará responder automaticamente.\n"
             "Ou clique em um dos tópicos abaixo:"
         )
@@ -184,7 +184,7 @@ async def iniciar_atendimento_humanizado(update: Update, context: ContextTypes.D
         await query.answer()
         
         texto = (
-            "👤 <b>Atendimento Humanizado - AlertaSUS 2.0</b>\n\n"
+            "👤 <b>Atendimento Humanizado - VigiaSaude</b>\n\n"
             "Você será atendido por nossa equipe especializada.\n\n"
             "Por favor, descreva sua dúvida ou problema abaixo.\n"
             "Nossa equipe responderá o mais breve possível (horário comercial: 08h às 18h).\n\n"
@@ -194,7 +194,7 @@ async def iniciar_atendimento_humanizado(update: Update, context: ContextTypes.D
         await query.edit_message_text(texto, parse_mode="HTML")
     else:
         await update.message.reply_text(
-            "👤 <b>Atendimento Humanizado - AlertaSUS 2.0</b>\n\n"
+            "👤 <b>Atendimento Humanizado - VigiaSaude</b>\n\n"
             "Por favor, descreva sua dúvida ou problema abaixo.\n"
             "Nossa equipe responderá o mais breve possível.\n\n"
             "<i>Digite sua mensagem agora:</i>",
